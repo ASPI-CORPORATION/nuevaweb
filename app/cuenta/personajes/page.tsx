@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getSession } from '@/lib/auth'
 import { queryCharacters } from '@/lib/db'
 import { CharacterActions } from '@/components/cuenta/CharacterActions'
@@ -62,7 +63,20 @@ export default async function PersonajesPage() {
                     {RACE_NAMES[char.race] || '?'} {CLASS_NAMES[char.class] || '?'} - Nivel {char.level}
                   </div>
                 </div>
-                <CharacterActions characterName={char.name} isOnline={!!char.online} />
+                <div className="flex items-center gap-3 flex-wrap">
+                  <Link
+                    href={`/armory/${encodeURIComponent(char.name)}`}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+                    style={{
+                      background: `${CLASS_COLORS[char.class] ?? '#75C7FF'}15`,
+                      border: `1px solid ${CLASS_COLORS[char.class] ?? '#75C7FF'}30`,
+                      color: CLASS_COLORS[char.class] ?? '#75C7FF',
+                    }}
+                  >
+                    Ver Armory
+                  </Link>
+                  <CharacterActions characterName={char.name} isOnline={!!char.online} />
+                </div>
               </div>
             </div>
           ))}

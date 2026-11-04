@@ -10,6 +10,7 @@ const navLinks = [
   { href: '/', label: 'Inicio' },
   { href: '/news', label: 'Noticias' },
   { href: '/rankings', label: 'Rankings' },
+  { href: '/personajes', label: 'Armory' },
   { href: '/changelog', label: 'Cambios' },
   { href: '/download', label: 'Descargar' },
   { href: '/vote', label: 'Votar' },
