@@ -6,150 +6,164 @@ import Link from 'next/link'
 
 const paths = [
   {
-    icon: Shield,
-    iconColor: '#75C7FF',
+    num: '01',
+    Icon: Shield,
+    accent: '#75C7FF',
+    glow: 'rgba(117,199,255,0.18)',
+    bgGlow: 'rgba(117,199,255,0.04)',
+    borderHover: 'rgba(117,199,255,0.4)',
     title: 'Aventurero Blizzlike',
     subtitle: 'El camino clásico, agilizado',
-    description:
-      'Viví la experiencia original de WoW WotLK con rates optimizados para Argentina. Leveo con Sets de Leveo exclusivos que aceleran tu progreso sin quitarte la experiencia del juego. Dungeons, raids, PvP, todo como Blizzard lo pensó.',
-    tags: ['x2 XP', 'Sets de Leveo', 'Blizzlike+', 'PvP/PvE'],
-    color: 'blue',
-    delay: 0.1,
+    desc: 'Viví la experiencia original de WoW WotLK con rates optimizados para Argentina. Sets de leveo exclusivos, dungeons, raids, y PvP como Blizzard lo pensó.',
+    tags: ['× 2 XP', 'Sets de Leveo', 'Blizzlike +', 'PvP / PvE'],
+    cta: 'Elegí este camino',
   },
   {
-    icon: Zap,
-    iconColor: '#FFD700',
+    num: '02',
+    Icon: Zap,
+    accent: '#FFD700',
+    glow: 'rgba(255,215,0,0.18)',
+    bgGlow: 'rgba(255,215,0,0.04)',
+    borderHover: 'rgba(255,215,0,0.4)',
     title: 'Instant 80',
     subtitle: 'Directo al endgame',
-    description:
-      'No perdés tiempo leveleando. Creás el personaje, ya sos nivel 80, con gear inicial, listo para meterte de lleno en arenas, battlegrounds y raids. Perfecto para los que quieren puro contenido de alto nivel desde el primer momento.',
+    desc: 'Creás el personaje, ya sos nivel 80 con gear inicial. Arenas, battlegrounds, raids de alto nivel desde el primer momento. Sin leveo, puro contenido top.',
     tags: ['Nivel 80', 'Gear Inicial', 'Arenas', 'Raids Instant'],
-    color: 'gold',
-    delay: 0.2,
+    cta: 'Elegí este camino',
+    featured: true,
   },
   {
-    icon: Flame,
-    iconColor: '#FF6B4A',
+    num: '03',
+    Icon: Flame,
+    accent: '#FF6B4A',
+    glow: 'rgba(255,107,74,0.18)',
+    bgGlow: 'rgba(255,107,74,0.04)',
+    borderHover: 'rgba(255,107,74,0.4)',
     title: 'Leveo Rápido',
     subtitle: 'El camino del medio',
-    description:
-      'NPCs especiales a los niveles 20, 40 y 60 te dan quests, gear y boost de XP. Leveo acelerado pero con contenido a seguir. Llegás al 80 rápido y bien equipado. Con la comunidad más activa del servidor.',
+    desc: 'NPCs a los niveles 20, 40 y 60 te dan quests, gear y boost de XP. Leveo acelerado con contenido a seguir. Llegás al 80 rápido y bien equipado.',
     tags: ['NPCs 20/40/60', 'XP Rápido', 'Quests Custom', 'Gear por zona'],
-    color: 'orange',
-    delay: 0.3,
+    cta: 'Elegí este camino',
   },
 ]
 
-const colorMap = {
-  blue: {
-    border: 'hover:border-blue-400/50',
-    icon: 'bg-blue-500/10 border-blue-500/20',
-    tag: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
-    glow: 'hover:shadow-[0_0_30px_rgba(117,199,255,0.15)]',
-  },
-  gold: {
-    border: 'hover:border-yellow-400/50',
-    icon: 'bg-yellow-500/10 border-yellow-500/20',
-    tag: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20',
-    glow: 'hover:shadow-[0_0_30px_rgba(255,215,0,0.15)]',
-  },
-  orange: {
-    border: 'hover:border-orange-400/50',
-    icon: 'bg-orange-500/10 border-orange-500/20',
-    tag: 'bg-orange-500/10 text-orange-300 border-orange-500/20',
-    glow: 'hover:shadow-[0_0_30px_rgba(255,107,74,0.15)]',
-  },
-}
-
 export function PathsSection() {
   return (
-    <section className="relative z-10 py-24 px-4">
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
-        >
+    <section className="relative z-10 py-20 md:py-28 px-4">
+      {/* Subtle bg tint */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(10,20,50,0.5) 0%, transparent 70%)' }} />
+
+      <div className="relative max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-4"
+            style={{ background: 'rgba(117,199,255,0.07)', border: '1px solid rgba(117,199,255,0.18)', color: '#75C7FF' }}>
+            <Zap className="w-3.5 h-3.5" /> Elegí cómo jugar
+          </div>
           <h2 className="font-['Cinzel'] font-black text-4xl md:text-5xl text-white mb-4">
             Tres Caminos,{' '}
-            <span style={{
-              background: 'linear-gradient(135deg, #75C7FF, #FFFFFF)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
+            <span style={{ background: 'linear-gradient(135deg, #75C7FF, #FFFFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               Tu Elección
             </span>
           </h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            WoW Argentina es el único servidor con tres formas distintas de jugar. Elegís cómo querés vivir Rasganorte.
+            WoW Argentina es el único servidor con tres formas distintas de vivir Rasganorte. Cada camino está diseñado para un estilo diferente.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {paths.map((path) => {
-            const Icon = path.icon
-            const colors = colorMap[path.color as keyof typeof colorMap]
-            return (
-              <motion.div
-                key={path.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: path.delay }}
-                whileHover={{ y: -6 }}
-                className={`group relative bg-slate-900/60 border border-slate-700/50 ${colors.border} ${colors.glow} rounded-2xl p-6 backdrop-blur-sm transition-all duration-300 cursor-pointer`}
-              >
-                {/* Icon */}
-                <div className={`w-14 h-14 rounded-2xl ${colors.icon} border flex items-center justify-center mb-5`}>
-                  <Icon className="w-7 h-7" style={{ color: path.iconColor }} />
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {paths.map((p, i) => (
+            <motion.div key={p.num}
+              initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.55, delay: i * 0.1 }}
+              whileHover={{ y: -8, scale: 1.01 }}
+              className="group relative rounded-2xl p-6 flex flex-col transition-all duration-300 cursor-pointer"
+              style={{
+                background: p.featured
+                  ? `linear-gradient(160deg, rgba(255,215,0,0.06) 0%, rgba(10,20,40,0.85) 60%)`
+                  : 'rgba(10,20,40,0.65)',
+                border: `1px solid ${p.featured ? 'rgba(255,215,0,0.2)' : 'rgba(117,199,255,0.1)'}`,
+                backdropFilter: 'blur(14px)',
+              }}
+            >
+              {/* Background large number */}
+              <div className="absolute top-4 right-5 font-['Cinzel'] font-black select-none pointer-events-none"
+                style={{ fontSize: '6rem', lineHeight: 1, color: p.accent, opacity: 0.04 }}>
+                {p.num}
+              </div>
+
+              {/* Featured badge */}
+              {p.featured && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full text-xs font-bold tracking-widest uppercase"
+                  style={{ background: 'linear-gradient(135deg, #FFD700, #b45309)', color: '#050A14' }}>
+                  Más Popular
                 </div>
+              )}
 
-                {/* Text */}
-                <h3 className="font-['Cinzel'] font-bold text-xl text-white mb-1">{path.title}</h3>
-                <p className="text-sm font-medium mb-3" style={{ color: path.iconColor }}>{path.subtitle}</p>
-                <p className="text-slate-400 text-sm leading-relaxed mb-5">{path.description}</p>
+              {/* Glow overlay on hover */}
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{ background: `radial-gradient(ellipse 70% 50% at 50% 0%, ${p.bgGlow}, transparent)` }} />
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2">
-                  {path.tags.map(tag => (
-                    <span key={tag} className={`text-xs px-2 py-1 rounded-full border ${colors.tag}`}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+              {/* Number badge */}
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-5 font-['Cinzel'] font-black text-sm flex-shrink-0"
+                style={{ background: `${p.accent}12`, border: `1px solid ${p.accent}30`, color: p.accent }}>
+                {p.num}
+              </div>
 
-                {/* Hover border glow */}
-                <div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              {/* Icon circle */}
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 flex-shrink-0"
+                style={{ background: `${p.accent}10`, border: `1px solid ${p.accent}25` }}>
+                <p.Icon className="w-7 h-7" style={{ color: p.accent }} />
+              </div>
+
+              <h3 className="font-['Cinzel'] font-bold text-xl text-white mb-1">{p.title}</h3>
+              <p className="text-sm font-medium mb-3" style={{ color: p.accent }}>{p.subtitle}</p>
+              <p className="text-slate-400 text-sm leading-relaxed mb-5 flex-1">{p.desc}</p>
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                {p.tags.map(tag => (
+                  <span key={tag} className="text-xs px-2.5 py-1 rounded-full font-medium"
+                    style={{ background: `${p.accent}10`, border: `1px solid ${p.accent}25`, color: p.accent }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <Link href="/register" className="mt-auto">
+                <div className="flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group-hover:pl-5"
                   style={{
-                    background: `radial-gradient(ellipse 80% 50% at 50% 0%, ${path.iconColor}08, transparent)`,
-                  }}
-                />
-              </motion.div>
-            )
-          })}
+                    background: `${p.accent}0d`,
+                    border: `1px solid ${p.accent}22`,
+                    color: p.accent,
+                  }}>
+                  <span>{p.cta}</span>
+                  <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="text-center mt-10"
-        >
+        {/* Bottom CTA */}
+        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.4 }}
+          className="text-center mt-12">
           <Link href="/download">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="px-8 py-3 bg-transparent border border-blue-500/40 hover:border-blue-400/70 text-blue-300 hover:text-blue-200 font-['Cinzel'] font-semibold rounded-xl transition-all"
-            >
-              Cómo empezar a jugar →
+            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              className="px-8 py-3 rounded-xl font-['Cinzel'] font-semibold text-sm transition-all"
+              style={{ background: 'rgba(117,199,255,0.07)', border: '1px solid rgba(117,199,255,0.2)', color: '#75C7FF' }}>
+              Guía de inicio rápido →
             </motion.button>
           </Link>
         </motion.div>
       </div>
+
+      {/* Section divider */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-px"
+        style={{ background: 'linear-gradient(to right, transparent, rgba(117,199,255,0.12), transparent)' }} />
     </section>
   )
 }

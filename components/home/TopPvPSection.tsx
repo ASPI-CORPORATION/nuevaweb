@@ -1,119 +1,109 @@
-import Link from 'next/link'
 import { queryCharacters } from '@/lib/db'
-import { Trophy } from 'lucide-react'
+import { TopPvPTabs, type PvpPlayer } from './TopPvPTabs'
+import { Swords, Trophy } from 'lucide-react'
 
-interface TopPlayer {
-  name: string
-  race: number
-  class: number
-  totalHonorPoints: number
-  arenaPoints: number
-}
-
-const CLASS_NAMES: Record<number, string> = {
-  1: 'Guerrero', 2: 'Paladín', 3: 'Cazador', 4: 'Pícaro',
-  5: 'Sacerdote', 6: 'Caballero de la Muerte', 7: 'Chamán',
-  8: 'Mago', 9: 'Brujo', 11: 'Druida',
-}
-
-const CLASS_COLORS: Record<number, string> = {
-  1: '#C79C6E', 2: '#F58CBA', 3: '#ABD473', 4: '#FFF569',
-  5: '#FFFFFF', 6: '#C41F3B', 7: '#0070DE', 8: '#69CCF0',
-  9: '#9482C9', 11: '#FF7D0A',
-}
-
-async function getTopHonor(): Promise<TopPlayer[]> {
+async function getPvpData() {
   try {
-    return await queryCharacters<TopPlayer>(
-      `SELECT name, race, class, totalHonorPoints, arenaPoints
-       FROM characters
-       WHERE totalHonorPoints > 0 AND deleteinfos_account IS NULL
-       ORDER BY totalHonorPoints DESC
-       LIMIT 5`
-    )
+    const [honor, arena, level] = await Promise.all([
+      queryCharacters<PvpPlayer>(
+        `SELECT c.name, c.class, c.totalHonorPoints, c.arenaPoints, c.level,
+                g.name as guild
+         FROM characters c
+         LEFT JOIN guild_member gm ON gm.guid = c.guid
+         LEFT JOIN guild g ON g.guildid = gm.guildid
+         WHERE c.totalHonorPoints > 0 AND c.deleteInfos_Name IS NULL
+         ORDER BY c.totalHonorPoints DESC LIMIT 10`
+      ),
+      queryCharacters<PvpPlayer>(
+        `SELECT c.name, c.class, c.totalHonorPoints, c.arenaPoints, c.level,
+                g.name as guild
+         FROM characters c
+         LEFT JOIN guild_member gm ON gm.guid = c.guid
+         LEFT JOIN guild g ON g.guildid = gm.guildid
+         WHERE c.arenaPoints > 0 AND c.deleteInfos_Name IS NULL
+         ORDER BY c.arenaPoints DESC LIMIT 10`
+      ),
+      queryCharacters<PvpPlayer>(
+        `SELECT c.name, c.class, c.totalHonorPoints, c.arenaPoints, c.level,
+                g.name as guild
+         FROM characters c
+         LEFT JOIN guild_member gm ON gm.guid = c.guid
+         LEFT JOIN guild g ON g.guildid = gm.guildid
+         WHERE c.deleteInfos_Name IS NULL
+         ORDER BY c.level DESC, c.totalHonorPoints DESC LIMIT 10`
+      ),
+    ])
+    return { honor, arena, level }
   } catch {
-    return []
+    return { honor: [], arena: [], level: [] }
   }
 }
 
 export async function TopPvPSection() {
-  const top = await getTopHonor()
+  const { honor, arena, level } = await getPvpData()
 
   return (
-    <section className="relative z-10 py-24 px-4 bg-gradient-to-b from-transparent via-red-950/5 to-transparent">
+    <section className="relative z-10 py-20 md:py-28 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-end justify-between mb-12">
-          <div>
-            <h2 className="font-['Cinzel'] font-black text-4xl text-white mb-2">
-              Top{' '}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+
+          {/* Left: header + flavor text */}
+          <div className="lg:sticky lg:top-24">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-4"
+              style={{ background: 'rgba(255,215,0,0.07)', border: '1px solid rgba(255,215,0,0.18)', color: '#FFD700' }}>
+              <Trophy className="w-3.5 h-3.5" /> Tabla de clasificación
+            </div>
+            <h2 className="font-['Cinzel'] font-black text-4xl md:text-5xl text-white mb-4 leading-tight">
+              Los Mejores{' '}
               <span style={{
-                background: 'linear-gradient(135deg, #FFD700, #FFF8E1)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                background: 'linear-gradient(135deg, #FFD700, #FF8C00)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               }}>
-                PvP
+                Guerreros
               </span>
             </h2>
-            <p className="text-slate-400">Los guerreros más honorables de Rasganorte</p>
+            <p className="text-slate-400 text-lg mb-8 max-w-md">
+              Las leyendas de Rasganorte. Honor ganado en el campo de batalla, puntos de arena forjados en duelo.
+            </p>
+
+            {/* Decorative swords */}
+            <div className="relative w-48 h-48 hidden lg:block">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 rounded-full flex items-center justify-center"
+                  style={{
+                    background: 'radial-gradient(circle at 50% 50%, rgba(255,215,0,0.08) 0%, transparent 70%)',
+                    border: '1px solid rgba(255,215,0,0.1)',
+                  }}>
+                  <Swords className="w-14 h-14" style={{ color: 'rgba(255,215,0,0.25)' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Stat strip */}
+            <div className="flex gap-6 mt-6">
+              {[
+                { n: honor.length, label: 'Con Honor' },
+                { n: arena.length, label: 'En Arena' },
+                { n: level.length, label: 'Top Nivel' },
+              ].map(({ n, label }) => (
+                <div key={label}>
+                  <div className="font-['Cinzel'] font-black text-2xl" style={{ color: '#FFD700' }}>{n}</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wider">{label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <Link
-            href="/rankings"
-            className="hidden md:flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-medium"
-          >
-            Rankings completos →
-          </Link>
+
+          {/* Right: tab component */}
+          <div className="rounded-2xl p-5 md:p-6"
+            style={{ background: 'rgba(5,15,38,0.8)', border: '1px solid rgba(255,215,0,0.1)', backdropFilter: 'blur(14px)' }}>
+            <TopPvPTabs honor={honor} arena={arena} level={level} />
+          </div>
         </div>
-
-        {top.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">
-            <p>Todavía no hay guerreros con honor. ¡Sé el primero!</p>
-          </div>
-        ) : (
-          <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl overflow-hidden">
-            {top.map((player, i) => (
-              <Link
-                key={player.name}
-                href={`/armory/${player.name}`}
-                className="flex items-center gap-4 px-6 py-4 border-b border-slate-700/30 last:border-0 hover:bg-blue-500/5 transition-colors group"
-              >
-                {/* Rank */}
-                <div className="w-8 text-center">
-                  {i === 0 ? (
-                    <Trophy className="w-6 h-6 text-yellow-400 mx-auto" />
-                  ) : i === 1 ? (
-                    <span className="font-['Cinzel'] font-bold text-slate-300 text-lg">2</span>
-                  ) : i === 2 ? (
-                    <span className="font-['Cinzel'] font-bold text-orange-400 text-lg">3</span>
-                  ) : (
-                    <span className="font-['Cinzel'] font-bold text-slate-500 text-lg">{i + 1}</span>
-                  )}
-                </div>
-
-                {/* Name + Class */}
-                <div className="flex-1">
-                  <div
-                    className="font-semibold group-hover:underline transition-colors"
-                    style={{ color: CLASS_COLORS[player.class] || '#FFFFFF' }}
-                  >
-                    {player.name}
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    {CLASS_NAMES[player.class] || 'Desconocido'}
-                  </div>
-                </div>
-
-                {/* Honor */}
-                <div className="text-right">
-                  <div className="font-['Cinzel'] font-semibold text-yellow-400">
-                    {player.totalHonorPoints.toLocaleString('es-AR')}
-                  </div>
-                  <div className="text-xs text-slate-500">Honor</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
+
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-px"
+        style={{ background: 'linear-gradient(to right, transparent, rgba(255,215,0,0.1), transparent)' }} />
     </section>
   )
 }
