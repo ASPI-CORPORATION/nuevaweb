@@ -1,5 +1,8 @@
 import mysql from 'mysql2/promise'
 
+// Re-export for callers that need the ResultSetHeader type
+export type { ResultSetHeader } from 'mysql2'
+
 const baseConfig = {
   host: process.env.DATABASE_HOST || 'localhost',
   port: parseInt(process.env.DATABASE_PORT || '3306'),
@@ -64,4 +67,25 @@ export async function queryAuthFirst<T = unknown>(sql: string, params?: unknown[
 export async function queryCharactersFirst<T = unknown>(sql: string, params?: unknown[]): Promise<T | null> {
   const rows = await queryCharacters<T>(sql, params)
   return rows[0] ?? null
+}
+
+/**
+ * Executes an INSERT / UPDATE / DELETE against the auth DB and returns the ResultSetHeader.
+ * Use this instead of queryAuth() for mutation statements — queryAuth() already extracts
+ * the first element of mysql2's tuple, so the returned value is a plain ResultSetHeader
+ * object (not an array) and cannot be destructured as `const [result] = ...`.
+ */
+export async function executeAuth(sql: string, params?: unknown[]): Promise<mysql.ResultSetHeader> {
+  const [result] = await dbAuth.execute(sql, params as never)
+  return result as mysql.ResultSetHeader
+}
+
+export async function executeCharacters(sql: string, params?: unknown[]): Promise<mysql.ResultSetHeader> {
+  const [result] = await dbCharacters.execute(sql, params as never)
+  return result as mysql.ResultSetHeader
+}
+
+export async function executeCms(sql: string, params?: unknown[]): Promise<mysql.ResultSetHeader> {
+  const [result] = await dbCms.execute(sql, params as never)
+  return result as mysql.ResultSetHeader
 }

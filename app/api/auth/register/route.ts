@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { queryAuth, queryAuthFirst, queryCms } from '@/lib/db'
+import { queryAuthFirst, executeAuth, executeCms } from '@/lib/db'
 import { generateSRPCredentials } from '@/lib/srp6'
 import { rateLimit } from '@/lib/rate-limit'
 import { signToken, createSessionCookie } from '@/lib/auth'
@@ -38,12 +38,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { username, password, email } = parsed.data
+  const usernameUpper = username.toUpperCase()
 
   try {
     // Username único (case insensitive)
     const existingUser = await queryAuthFirst<{ id: number }>(
       'SELECT id FROM account WHERE UPPER(username) = UPPER(?)',
-      [username]
+      [username],
     )
     if (existingUser) {
       return NextResponse.json({ error: 'Ese nombre de cuenta ya está en uso' }, { status: 400 })
@@ -52,52 +53,59 @@ export async function POST(req: NextRequest) {
     // Email único
     const existingEmail = await queryAuthFirst<{ id: number }>(
       'SELECT id FROM account WHERE email = ?',
-      [email]
+      [email],
     )
     if (existingEmail) {
       return NextResponse.json({ error: 'Ese email ya está registrado' }, { status: 400 })
     }
 
     // Generar credenciales SRP6 (salt + verifier, 32 bytes c/u, little-endian)
-    const { saltBuffer, verifierBuffer } = generateSRPCredentials(username, password)
+    // No se loguean ni exponen — solo se insertan en DB como BINARY(32)
+    const { saltBuffer, verifierBuffer } = generateSRPCredentials(usernameUpper, password)
 
-    // Insertar en acore_auth.account — sin sha_pass_hash (no existe en master 2026)
-    const [result] = await queryAuth(
+    console.log(`[register] inserting account username="${usernameUpper}" ip=${ip}`)
+
+    // Insertar en acore_auth.account — sin sha_pass_hash (columna inexistente en master 2026)
+    // executeAuth devuelve ResultSetHeader directamente; NO usar queryAuth() para INSERT
+    // porque queryAuth ya extrae la primera posición del tuple de mysql2 y devuelve un
+    // objeto plano (no iterable), lo que causaba: TypeError: (intermediate value) is not iterable
+    const insertResult = await executeAuth(
       `INSERT INTO account (username, salt, verifier, email, reg_mail, joindate, last_ip, locked, online, expansion)
        VALUES (?, ?, ?, ?, ?, NOW(), ?, 0, 0, 2)`,
-      [
-        username.toUpperCase(),
-        saltBuffer,
-        verifierBuffer,
-        email,
-        email,
-        ip,
-      ]
-    ) as unknown as [{ insertId: number }, unknown]
-
-    const accountId = (result as unknown as { insertId: number }).insertId
-
-    // Crear fila de monedas
-    await queryCms(
-      'INSERT IGNORE INTO cms_user_coins (account_id, coins) VALUES (?, 0)',
-      [accountId]
+      [usernameUpper, saltBuffer, verifierBuffer, email, email, ip],
     )
 
-    // Log de registro
-    await queryCms(
+    const accountId = insertResult.insertId
+    if (!accountId) {
+      console.error(`[register] INSERT did not return insertId for username="${usernameUpper}"`)
+      return NextResponse.json({ error: 'Error al crear la cuenta' }, { status: 500 })
+    }
+
+    console.log(`[register] account created id=${accountId} username="${usernameUpper}"`)
+
+    // Crear fila de monedas en CMS (IGNORE si ya existe por alguna razón)
+    await executeCms(
+      'INSERT IGNORE INTO cms_user_coins (account_id, coins) VALUES (?, 0)',
+      [accountId],
+    )
+
+    // Log de registro (sin contraseñas ni credenciales)
+    await executeCms(
       'INSERT INTO cms_logs (account_id, action, details, ip) VALUES (?, ?, ?, ?)',
-      [accountId, 'REGISTRO', `Nueva cuenta: ${username.toUpperCase()}`, ip]
+      [accountId, 'REGISTRO', `Nueva cuenta: ${usernameUpper}`, ip],
     )
 
     // Auto-login
-    const token = signToken({ id: accountId, username: username.toUpperCase(), email, gmlevel: 0, expansion: 2 })
+    const token = signToken({ id: accountId, username: usernameUpper, email, gmlevel: 0, expansion: 2 })
 
     const response = NextResponse.json({ success: true, message: '¡Cuenta creada! Bienvenido a WoW Argentina.' })
     response.headers.set('Set-Cookie', createSessionCookie(token))
     return response
 
   } catch (err) {
-    console.error('Register error:', err)
+    // Log de error sin exponer contraseñas ni credenciales
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[register] error username="${username}" op=register msg="${msg}"`)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
