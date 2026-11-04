@@ -1,0 +1,270 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-primary: #050A14;
+  --bg-secondary: #0A1628;
+  --bg-card: #0D1E35;
+  --bg-card-hover: #122444;
+  --accent-blue: #75C7FF;
+  --accent-gold: #FFD700;
+  --accent-silver: #C0C0C0;
+  --text-primary: #E8F4FF;
+  --text-muted: #7A9ABF;
+  --border-primary: rgba(117, 199, 255, 0.15);
+  --border-gold: rgba(255, 215, 0, 0.3);
+  --glow-blue: 0 0 20px rgba(117, 199, 255, 0.3);
+  --glow-gold: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Cinzel', serif;
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(117, 199, 255, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-blue);
+}
+
+/* Efectos de texto */
+.text-glow-blue {
+  text-shadow: 0 0 10px rgba(117, 199, 255, 0.8), 0 0 30px rgba(117, 199, 255, 0.4);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.4);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #75C7FF 0%, #FFFFFF 50%, #75C7FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-gold {
+  background: linear-gradient(135deg, #FFD700 0%, #FFF8E1 50%, #FFD700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Cards */
+.card-dark {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.card-dark:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-blue);
+  box-shadow: var(--glow-blue);
+}
+
+.card-gold {
+  background: linear-gradient(135deg, #1a1500 0%, #0D1E35 100%);
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+}
+
+.card-gold:hover {
+  box-shadow: var(--glow-gold);
+  border-color: var(--accent-gold);
+}
+
+/* Botones */
+.btn-primary {
+  background: linear-gradient(135deg, #1a4a7a 0%, #0a2a5a 100%);
+  border: 1px solid var(--accent-blue);
+  color: var(--accent-blue);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(117, 199, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2060a0 0%, #1040a0 100%);
+  box-shadow: var(--glow-blue);
+  transform: translateY(-1px);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #5a3a00 0%, #3a2800 100%);
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-gold:hover {
+  background: linear-gradient(135deg, #7a5000 0%, #5a4000 100%);
+  box-shadow: var(--glow-gold);
+  transform: translateY(-1px);
+}
+
+/* Navbar */
+.navbar-blur {
+  backdrop-filter: blur(20px);
+  background: rgba(5, 10, 20, 0.85);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+/* Badge clases WoW */
+.class-warrior    { color: #C79C6E; }
+.class-paladin    { color: #F58CBA; }
+.class-hunter     { color: #ABD473; }
+.class-rogue      { color: #FFF569; }
+.class-priest     { color: #FFFFFF; }
+.class-shaman     { color: #0070DE; }
+.class-mage       { color: #69CCF0; }
+.class-warlock    { color: #9482C9; }
+.class-druid      { color: #FF7D0A; }
+.class-deathknight{ color: #C41F3B; }
+
+/* Animaciones */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(117, 199, 255, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(117, 199, 255, 0.6); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes snow-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0.3; }
+}
+
+.float-anim {
+  animation: float 3s ease-in-out infinite;
+}
+
+.pulse-glow-anim {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Directivos - estilo especial */
+.directivos-layout {
+  --accent: #FFD700;
+  background: linear-gradient(135deg, #030805 0%, #05080D 100%);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.crown-badge {
+  background: linear-gradient(135deg, #5a3a00, #3a2800);
+  border: 1px solid #FFD700;
+  color: #FFD700;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(90deg, #0D1E35 25%, #122444 50%, #0D1E35 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Input dark */
+input, textarea, select {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 2px rgba(117, 199, 255, 0.1) !important;
+}
+
+/* Tablas */
+table {
+  color: var(--text-primary);
+}
+
+tr:hover td {
+  background: rgba(117, 199, 255, 0.05);
+  transition: background 0.2s;
+}
+
+/* Partículas de nieve canvas */
+#snow-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
