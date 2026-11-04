@@ -4,10 +4,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-export default function AdminStatsCharts({ weeklySignups }: { weeklySignups: { day: string; count: number }[] }) {
+export default function AdminStatsCharts({ weeklySignups }: { weeklySignups: { day: string | Date; count: number }[] }) {
   const data = weeklySignups.map(r => ({
-    day: format(parseISO(r.day), 'EEE d', { locale: es }),
-    registros: r.count,
+    day: format(r.day instanceof Date ? r.day : parseISO(String(r.day)), 'EEE d', { locale: es }),
+    registros: Number(r.count),
   }))
 
   if (data.length === 0) {

@@ -27,7 +27,7 @@ async function getStats() {
   ])
 
   const weeklySignups = await queryAuth<{ day: string; count: number }>(
-    `SELECT DATE(joindate) as day, COUNT(*) as count
+    `SELECT DATE_FORMAT(joindate, '%Y-%m-%d') as day, COUNT(*) as count
      FROM account WHERE joindate >= DATE_SUB(NOW(), INTERVAL 7 DAY)
      GROUP BY DATE(joindate) ORDER BY day ASC`
   ).catch(() => [])
