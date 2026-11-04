@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getSessionFromRequest } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
@@ -14,11 +14,10 @@ function getUserFromRequest(req: NextRequest) {
   }
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   const user = getUserFromRequest(req)
 
-  // Rutas protegidas
   if (pathname.startsWith('/cuenta')) {
     if (!user) {
       return NextResponse.redirect(new URL('/login?redirect=' + encodeURIComponent(pathname), req.url))
@@ -27,27 +26,19 @@ export function middleware(req: NextRequest) {
 
   if (pathname.startsWith('/gm')) {
     if (!user || user.gmlevel < 2) {
-      const url = new URL('/', req.url)
-      return NextResponse.redirect(url)
+      return NextResponse.redirect(new URL('/', req.url))
     }
   }
 
   if (pathname.startsWith('/admin')) {
     if (!user || user.gmlevel < 3) {
-      const url = new URL('/', req.url)
-      return NextResponse.redirect(url)
+      return NextResponse.redirect(new URL('/', req.url))
     }
   }
 
   if (pathname.startsWith('/directivos')) {
     if (!user || user.gmlevel < 10) {
-      // Log intento de acceso no autorizado (lo hacemos en la API)
-      const url = new URL('/api/security/log-attempt', req.url)
-      // Redirigir a home
-      const response = NextResponse.redirect(new URL('/', req.url))
-      // Pasar info del intento via header interno
-      response.headers.set('x-unauthorized-attempt', pathname)
-      return response
+      return NextResponse.redirect(new URL('/', req.url))
     }
   }
 
