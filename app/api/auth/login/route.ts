@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { queryAuthFirst, queryCms } from '@/lib/db'
-import { computePassHash, computeVerifier } from '@/lib/srp6'
+import { verifyPassword } from '@/lib/srp6'
 import { rateLimit } from '@/lib/rate-limit'
 import { signToken, createSessionCookie, getFullGmLevel } from '@/lib/auth'
 
@@ -14,9 +14,8 @@ interface AccountRow {
   id: number
   username: string
   email: string
-  sha_pass_hash: string
-  verifier: Buffer
   salt: Buffer
+  verifier: Buffer
   expansion: number
   locked: number
 }
@@ -28,7 +27,6 @@ interface BanRow {
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
 
-  // Rate limit: 10 intentos por IP cada 15 min
   const rl = rateLimit(`login:${ip}`, 10, 15 * 60 * 1000)
   if (!rl.success) {
     return NextResponse.json({ error: 'Demasiados intentos. Esperá 15 minutos.' }, { status: 429 })
@@ -50,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const account = await queryAuthFirst<AccountRow>(
-      'SELECT id, username, email, sha_pass_hash, verifier, salt, expansion, locked FROM account WHERE UPPER(username) = UPPER(?)',
+      'SELECT id, username, email, salt, verifier, expansion, locked FROM account WHERE UPPER(username) = UPPER(?)',
       [username]
     )
 
@@ -58,7 +56,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 })
     }
 
-    // Verificar ban
+    // Verificar ban activo
     const ban = await queryAuthFirst<BanRow>(
       'SELECT active FROM account_banned WHERE id = ? AND active = 1',
       [account.id]
@@ -67,16 +65,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tu cuenta está suspendida. Creá un ticket de soporte.' }, { status: 403 })
     }
 
-    // Verificar contraseña SRP6
-    // AzerothCore usa: sha_pass_hash = SHA1(UPPER(user):UPPER(pass))
-    const expectedHash = computePassHash(account.username, password)
+    // Verificar contraseña via SRP6 (compara verifier calculado con el almacenado)
+    const saltBuf = Buffer.isBuffer(account.salt) ? account.salt : Buffer.from(account.salt)
+    const verifierBuf = Buffer.isBuffer(account.verifier) ? account.verifier : Buffer.from(account.verifier)
 
-    // Comparar sha_pass_hash (método legacy, siempre presente)
-    if (account.sha_pass_hash.toUpperCase() !== expectedHash.toUpperCase()) {
+    if (!verifyPassword(account.username, password, saltBuf, verifierBuf)) {
       return NextResponse.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 })
     }
 
-    // Obtener GM level real
+    // Obtener GM level real desde account_access
     const gmlevel = await getFullGmLevel(account.id)
 
     // Actualizar last_login y last_ip

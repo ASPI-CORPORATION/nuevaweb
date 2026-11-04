@@ -20,7 +20,6 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? req.headers.get('x-real-ip') ?? 'unknown'
 
-  // Rate limit: 5 registros por IP cada 10 minutos
   const rl = rateLimit(`register:${ip}`, 5, 10 * 60 * 1000)
   if (!rl.success) {
     return NextResponse.json({ error: 'Demasiados intentos. Esperá un rato.' }, { status: 429 })
@@ -35,16 +34,13 @@ export async function POST(req: NextRequest) {
 
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
   }
 
   const { username, password, email } = parsed.data
 
   try {
-    // Verificar si username ya existe (case insensitive)
+    // Username único (case insensitive)
     const existingUser = await queryAuthFirst<{ id: number }>(
       'SELECT id FROM account WHERE UPPER(username) = UPPER(?)',
       [username]
@@ -53,7 +49,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Ese nombre de cuenta ya está en uso' }, { status: 400 })
     }
 
-    // Verificar email único
+    // Email único
     const existingEmail = await queryAuthFirst<{ id: number }>(
       'SELECT id FROM account WHERE email = ?',
       [email]
@@ -62,19 +58,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Ese email ya está registrado' }, { status: 400 })
     }
 
-    // Generar credenciales SRP6
-    const { saltBuffer, verifierBuffer, shaPassHash } = generateSRPCredentials(username, password)
+    // Generar credenciales SRP6 (salt + verifier, 32 bytes c/u, little-endian)
+    const { saltBuffer, verifierBuffer } = generateSRPCredentials(username, password)
 
-    // Insertar cuenta en acore_auth
-    // AzerothCore master 2026 usa columnas: id, username, salt, verifier, sha_pass_hash, email, reg_mail
-    const [result] = await queryAuth<{ insertId: number }>(
-      `INSERT INTO account (username, salt, verifier, sha_pass_hash, email, reg_mail, joindate, last_ip, locked, online, expansion)
-       VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, 0, 0, 2)`,
+    // Insertar en acore_auth.account — sin sha_pass_hash (no existe en master 2026)
+    const [result] = await queryAuth(
+      `INSERT INTO account (username, salt, verifier, email, reg_mail, joindate, last_ip, locked, online, expansion)
+       VALUES (?, ?, ?, ?, ?, NOW(), ?, 0, 0, 2)`,
       [
         username.toUpperCase(),
         saltBuffer,
         verifierBuffer,
-        shaPassHash,
         email,
         email,
         ip,
@@ -83,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     const accountId = (result as unknown as { insertId: number }).insertId
 
-    // Crear fila de Moneda Argentina
+    // Crear fila de monedas
     await queryCms(
       'INSERT IGNORE INTO cms_user_coins (account_id, coins) VALUES (?, 0)',
       [accountId]
@@ -92,7 +86,7 @@ export async function POST(req: NextRequest) {
     // Log de registro
     await queryCms(
       'INSERT INTO cms_logs (account_id, action, details, ip) VALUES (?, ?, ?, ?)',
-      [accountId, 'REGISTRO', `Nueva cuenta: ${username}`, ip]
+      [accountId, 'REGISTRO', `Nueva cuenta: ${username.toUpperCase()}`, ip]
     )
 
     // Auto-login

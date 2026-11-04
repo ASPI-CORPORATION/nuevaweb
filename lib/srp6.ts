@@ -1,13 +1,19 @@
 /**
- * SRP6 de Blizzard para AzerothCore WotLK 3.3.5a
- * Basado en Auth/SRP6.cpp de AzerothCore master 2026
- * CRÍTICO: Si esto está mal, la cuenta no entra al juego.
+ * SRP6 de Blizzard para AzerothCore WotLK 3.3.5a (MASTER 2026)
  *
- * Implementación:
- * - sha_pass_hash = SHA1(username + ":" + password) en MAYÚSCULAS
- * - salt = 32 bytes random
- * - verifier = g^x mod N donde x = SHA1(salt + sha_pass_hash)
- * - N y g son los parámetros SRP6 de Blizzard (1024-bit prime)
+ * La tabla account usa:
+ *   salt     BINARY(32)  — 32 bytes random
+ *   verifier BINARY(32)  — g^x mod N, 32 bytes
+ *   NO existe sha_pass_hash en master 2026.
+ *
+ * Convención de bytes: AzerothCore almacena los BigNumbers en little-endian.
+ * El SHA1 de x se interpreta como little-endian para obtener el entero x.
+ * El verifier se almacena como 32 bytes little-endian.
+ *
+ * Parámetros SRP6 de Blizzard WoW:
+ *   g = 7
+ *   N = DFB1FB689C4E0F2A1B4EBFBF8EB10108535006298B5BADBD5B53E1895E644B89
+ *       (big-endian; en memoria AC es little-endian: 894B645E...B1DF)
  */
 
 import { sha1 } from 'js-sha1'
@@ -15,144 +21,101 @@ import BigNumber from 'bignumber.js'
 
 BigNumber.config({ EXPONENTIAL_AT: 1e9 })
 
-// Parámetros SRP6 de Blizzard WoW (igual que en AzerothCore Auth/SRP6.cpp)
-const N_HEX =
-  'B79B3E2A87823CAB8F5EBFBF8EB10108535006298B5BADBD5B53E1895E644B89' +
-  '5FB8F9E4B28F730D2F5F06D2BD21BE3DA4DF68AFD5A3E7F9B285C04B5C8D2E6' +
-  'C8F11BE77CEDD3B79E13CF3B5F91E3DB0D3E218AFA32C65D44B28C0CC7BB7C0' +
-  '4F6B97A45A1D53A8E6D7B41EB0B0A0E8E31B1E8BE2D1B56A1E1E4F7B7B1E1E1'
-
-// N correcto de AzerothCore (894B645E89E1535BBDAD5B8B290650530801B18EBFBF4E1B2A0F4E9C68FBB1DF6E3DBDBF0B5E04E0FEB36F1FD0ADB2D7B1B2E39AC3A8D6E45C80A2F9E5A11D7B085CF4A4B40D5C8A8A1E8A28BBA1B2D1F41E7DC9E5AC68F1B0FF4C98E12EDE7B9EDE7B9EDE)
-// Usamos el N estándar de WoW SRP6 de 32 bytes little-endian:
+// N primo de WoW SRP6, en big-endian (para aritmética BigNumber)
+const N_BE = 'DFB1FB689C4E0F2A1B4EBFBF8EB10108535006298B5BADBD5B53E1895E644B89'
+const N = new BigNumber(N_BE, 16)
 const G = new BigNumber(7)
 
-// N de Blizzard WoW SRP6 (little-endian hex, 32 bytes)
-const N_BYTES_HEX = '894B645E89E1535BBDAD5B8B290650530801B18EBFBF4E1B2A0F4E9C68FBB1DF6E3DBDBF0B5E04E0FEB36F1FD0ADB2D7B1B2E39AC3A8D6E45C80A2F9E5A11D7B085CF4A4B40D5C8A8A1E8A28BBA1B2D1F41E7DC9E5AC68F1B0FF4C98E12EDE7B9EDE7B9ED'
+// ---------- helpers internos ----------
 
-// N prime de 32 bytes (256 bits) como lo usa AzerothCore
-const N_STR = '894B645E89E1535BBDAD5B8B290650530801B18EBFBF4E1B2A0F4E9C68FBB1DF6E3DBDBF0B5E04E0FEB36F1FD0ADB2D7B1B2E39AC3A8D6E45C80A2F9E5A11D7B085CF4A4B40D5C8A8A1E8A28BBA1B2D1F41E7DC9E5AC68F1B0FF4C98E12EDE7B9EDE7B9ED'
-
-// El N real de AzerothCore/WoW SRP6 (big-endian, tomado de Auth/BigNumber.h de AzerothCore)
-const N_HEX_BE = '894B645E89E1535BBDAD5B8B290650530801B18EBFBF4E1B2A0F4E9C68FBB1DF6E3DBDBF0B5E04E0FEB36F1FD0ADB2D7B1B2E39AC3A8D6E45C80A2F9E5A11D7B085CF4A4B40D5C8A8A1E8A28BBA1B2D1F41E7DC9E5AC68F1B0FF4C98E12EDE7B9EDE7B9ED'
-
-function hexToBigNumber(hex: string): BigNumber {
-  return new BigNumber(hex, 16)
+function sha1Bytes(data: Uint8Array | Buffer): Buffer {
+  // js-sha1 acepta ArrayBuffer/Uint8Array, retorna hex string
+  const hex = sha1(data instanceof Buffer ? new Uint8Array(data) : data)
+  return Buffer.from(hex, 'hex')
 }
 
-function bigNumberToHex(bn: BigNumber, padLength?: number): string {
-  let hex = bn.toString(16).toUpperCase()
-  if (padLength) {
-    while (hex.length < padLength) hex = '0' + hex
-  }
-  return hex
+/** Convierte BigNumber a Buffer de `len` bytes en little-endian. */
+function bnToLEBuffer(bn: BigNumber, len: number): Buffer {
+  const hex = bn.toString(16).padStart(len * 2, '0')
+  const be = Buffer.from(hex, 'hex')
+  return Buffer.from(be).reverse() as Buffer
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  const result = new Uint8Array(hex.length / 2)
-  for (let i = 0; i < hex.length; i += 2) {
-    result[i / 2] = parseInt(hex.substring(i, i + 2), 16)
-  }
-  return result
+/** Convierte Buffer little-endian a BigNumber. */
+function leBufferToBN(buf: Buffer): BigNumber {
+  const be = Buffer.from(buf).reverse().toString('hex')
+  return new BigNumber(be, 16)
 }
 
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-    .toUpperCase()
-}
+// ---------- API pública ----------
 
-function generateRandomBytes(length: number): Uint8Array {
+/**
+ * Genera 32 bytes aleatorios para usar como salt.
+ * Retorna Buffer que se guarda directamente en BINARY(32).
+ */
+export function generateSalt(): Buffer {
+  const bytes = new Uint8Array(32)
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    const bytes = new Uint8Array(length)
     crypto.getRandomValues(bytes)
-    return bytes
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { randomBytes } = require('crypto') as typeof import('crypto')
+    randomBytes(32).copy(Buffer.from(bytes.buffer))
   }
-  // Fallback Node.js
-  const { randomBytes } = require('crypto')
-  return new Uint8Array(randomBytes(length))
+  return Buffer.from(bytes)
 }
 
 /**
- * sha_pass_hash = SHA1(UPPER(username) + ":" + UPPER(password))
- * Como lo hace AzerothCore en Auth/SHA1.h
- */
-export function computePassHash(username: string, password: string): string {
-  const str = `${username.toUpperCase()}:${password.toUpperCase()}`
-  return sha1(str).toUpperCase()
-}
-
-/**
- * Genera salt (32 bytes random, almacenado en hex upper case)
- */
-export function generateSalt(): string {
-  const saltBytes = generateRandomBytes(32)
-  return bytesToHex(saltBytes)
-}
-
-/**
- * Calcula el verifier SRP6 de Blizzard:
- * x = SHA1(salt_bytes || sha_pass_hash_bytes)
- * verifier = g^x mod N
+ * Calcula el verifier SRP6:
+ *   sha_pass = SHA1(UPPER(username) + ":" + UPPER(password))   [20 bytes]
+ *   x_hash   = SHA1(salt_bytes || sha_pass_bytes)              [20 bytes]
+ *   x        = leBufferToBN(x_hash)   ← little-endian
+ *   verifier = g^x mod N              → 32 bytes little-endian
  *
- * @param username - nombre de cuenta
- * @param password - contraseña
- * @param saltHex - salt en hex (64 chars, 32 bytes)
- * @returns verifier en hex uppercase (64 chars)
+ * @param saltBuffer  Buffer de 32 bytes (tal como se guarda en DB)
  */
-export function computeVerifier(username: string, password: string, saltHex: string): string {
-  const passHash = computePassHash(username, password)
+export function computeVerifier(username: string, password: string, saltBuffer: Buffer): Buffer {
+  const passHashBuf = sha1Bytes(
+    Buffer.from(`${username.toUpperCase()}:${password.toUpperCase()}`)
+  )
+  const combined = Buffer.concat([saltBuffer, passHashBuf])
+  const xHashBuf = sha1Bytes(combined)
 
-  // salt bytes (32 bytes from hex)
-  const saltBytes = hexToBytes(saltHex.padStart(64, '0'))
-  // passHash bytes (20 bytes SHA1)
-  const passHashBytes = hexToBytes(passHash.padStart(40, '0'))
-
-  // x = SHA1(salt || passHash) - concatenar bytes
-  const combined = new Uint8Array(saltBytes.length + passHashBytes.length)
-  combined.set(saltBytes)
-  combined.set(passHashBytes, saltBytes.length)
-
-  const xHex = sha1(combined).toUpperCase()
-  const x = hexToBigNumber(xHex)
-
-  // N prime de WoW
-  const N = hexToBigNumber(N_HEX_BE)
-
-  // verifier = g^x mod N
+  const x = leBufferToBN(xHashBuf)
   const verifier = G.exponentiatedBy(x).modulo(N)
-
-  return bigNumberToHex(verifier, 64)
+  return bnToLEBuffer(verifier, 32)
 }
 
 /**
- * Genera salt + verifier para crear una cuenta nueva en AzerothCore.
- * Almacenar en acore_auth.account: salt y verifier en hex uppercase.
- *
- * AzerothCore (master 2026) usa columnas:
- * - salt BINARY(32) o VARCHAR - almacenamos hex
- * - verifier BINARY(32) o VARCHAR - almacenamos hex
- * - sha_pass_hash VARCHAR(40) - SHA1 legacy
- *
- * En la DB real: salt y verifier se guardan como BINARY (little-endian bytes).
- * Vamos a guardar los bytes directamente usando Buffer.from(hex,'hex').
+ * Verifica una contraseña comparando el verifier calculado con el almacenado.
+ * @param saltBuffer     Buffer de 32 bytes leído de account.salt
+ * @param verifierBuffer Buffer de 32 bytes leído de account.verifier
+ */
+export function verifyPassword(
+  username: string,
+  password: string,
+  saltBuffer: Buffer,
+  verifierBuffer: Buffer
+): boolean {
+  try {
+    const expected = computeVerifier(username, password, saltBuffer)
+    return expected.equals(verifierBuffer)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Genera salt + verifier listos para INSERT en acore_auth.account.
  */
 export function generateSRPCredentials(username: string, password: string) {
-  const saltHex = generateSalt()
-  const verifierHex = computeVerifier(username, password, saltHex)
-  const shaPassHash = computePassHash(username, password)
-
-  return {
-    saltHex,
-    verifierHex,
-    shaPassHash,
-    saltBuffer: Buffer.from(saltHex, 'hex'),
-    verifierBuffer: Buffer.from(verifierHex, 'hex'),
-  }
+  const saltBuffer = generateSalt()
+  const verifierBuffer = computeVerifier(username, password, saltBuffer)
+  return { saltBuffer, verifierBuffer }
 }
 
 /**
- * Actualiza contraseña - genera nuevos salt + verifier
+ * Genera nuevos salt + verifier para cambio de contraseña.
  */
 export function updatePasswordCredentials(username: string, newPassword: string) {
   return generateSRPCredentials(username, newPassword)

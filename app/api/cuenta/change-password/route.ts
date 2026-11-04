@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth'
 import { queryAuthFirst, queryAuth, queryCms } from '@/lib/db'
-import { computePassHash, generateSRPCredentials } from '@/lib/srp6'
+import { verifyPassword, generateSRPCredentials } from '@/lib/srp6'
 
 const schema = z.object({
   currentPassword: z.string().min(1),
@@ -25,29 +25,30 @@ export async function POST(req: NextRequest) {
   const { currentPassword, newPassword } = parsed.data
 
   try {
-    const account = await queryAuthFirst<{ username: string; sha_pass_hash: string }>(
-      'SELECT username, sha_pass_hash FROM account WHERE id = ?',
+    const account = await queryAuthFirst<{ username: string; salt: Buffer; verifier: Buffer }>(
+      'SELECT username, salt, verifier FROM account WHERE id = ?',
       [user.id]
     )
 
     if (!account) return NextResponse.json({ error: 'Cuenta no encontrada' }, { status: 404 })
 
-    // Verificar contraseña actual
-    const currentHash = computePassHash(account.username, currentPassword)
-    if (currentHash.toUpperCase() !== account.sha_pass_hash.toUpperCase()) {
+    const saltBuf = Buffer.isBuffer(account.salt) ? account.salt : Buffer.from(account.salt)
+    const verifierBuf = Buffer.isBuffer(account.verifier) ? account.verifier : Buffer.from(account.verifier)
+
+    // Verificar contraseña actual via SRP6
+    if (!verifyPassword(account.username, currentPassword, saltBuf, verifierBuf)) {
       return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 400 })
     }
 
     // Generar nuevas credenciales SRP6
-    const { saltBuffer, verifierBuffer, shaPassHash } = generateSRPCredentials(account.username, newPassword)
+    const { saltBuffer, verifierBuffer } = generateSRPCredentials(account.username, newPassword)
 
-    // Actualizar en DB
+    // Actualizar solo salt y verifier (no existe sha_pass_hash en master 2026)
     await queryAuth(
-      'UPDATE account SET salt = ?, verifier = ?, sha_pass_hash = ? WHERE id = ?',
-      [saltBuffer, verifierBuffer, shaPassHash, user.id]
+      'UPDATE account SET salt = ?, verifier = ? WHERE id = ?',
+      [saltBuffer, verifierBuffer, user.id]
     )
 
-    // Log
     await queryCms(
       'INSERT INTO cms_logs (account_id, action, details) VALUES (?, ?, ?)',
       [user.id, 'PASSWORD_CHANGE', 'Contraseña actualizada desde web']
