@@ -1,14 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Shield } from 'lucide-react'
 import { Suspense } from 'react'
 
 function LoginForm() {
-  const router = useRouter()
   const params = useSearchParams()
   const redirect = params.get('redirect') || '/cuenta'
 
@@ -35,8 +34,9 @@ function LoginForm() {
         return
       }
 
-      router.push(redirect)
-      router.refresh()
+      // Hard redirect so the browser sends a fresh request with the new cookie.
+      // router.push + router.refresh() races against itself and re-renders /login.
+      window.location.href = redirect
     } catch {
       setError('Error de red. Intentá de nuevo.')
     } finally {
