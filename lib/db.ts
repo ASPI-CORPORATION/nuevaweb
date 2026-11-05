@@ -89,3 +89,24 @@ export async function executeCms(sql: string, params?: unknown[]): Promise<mysql
   const [result] = await dbCms.execute(sql, params as never)
   return result as mysql.ResultSetHeader
 }
+
+/**
+ * Runs `fn` inside an acore_auth transaction.
+ * Automatically commits on success and rolls back on error.
+ */
+export async function withAuthTransaction<T>(
+  fn: (conn: mysql.PoolConnection) => Promise<T>
+): Promise<T> {
+  const conn = await dbAuth.getConnection()
+  try {
+    await conn.beginTransaction()
+    const result = await fn(conn)
+    await conn.commit()
+    return result
+  } catch (err) {
+    await conn.rollback()
+    throw err
+  } finally {
+    conn.release()
+  }
+}
