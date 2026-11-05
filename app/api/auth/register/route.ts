@@ -4,6 +4,7 @@ import { queryAuthFirst, executeAuth, executeCms } from '@/lib/db'
 import { generateSRPCredentials } from '@/lib/srp6'
 import { rateLimit } from '@/lib/rate-limit'
 import { signToken, createSessionCookie } from '@/lib/auth'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const schema = z.object({
   username: z.string()
@@ -18,9 +19,16 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? req.headers.get('x-real-ip') ?? 'unknown'
+  // Raw IP from proxy headers (may be IPv4 or IPv6).
+  const rawIp = getClientIP(req.headers)
 
-  const rl = rateLimit(`register:${ip}`, 5, 10 * 60 * 1000)
+  // normalizedIp  — human-readable IP for logs (VARCHAR(45) is safe)
+  // acoreIp       — safe for acore_auth VARCHAR(15) last_ip column:
+  //                 IPv4 / IPv4-mapped → real IPv4; pure IPv6 → '127.0.0.1'
+  const { normalizedIp, acoreIp, isIPv6: clientIsIPv6 } = normalizeIP(rawIp)
+
+  // Rate limit by real client IP (string key — works for IPv4 and IPv6)
+  const rl = rateLimit(`register:${normalizedIp}`, 5, 10 * 60 * 1000)
   if (!rl.success) {
     return NextResponse.json({ error: 'Demasiados intentos. Esperá un rato.' }, { status: 429 })
   }
@@ -63,7 +71,12 @@ export async function POST(req: NextRequest) {
     // No se loguean ni exponen — solo se insertan en DB como BINARY(32)
     const { saltBuffer, verifierBuffer } = generateSRPCredentials(usernameUpper, password)
 
-    console.log(`[register] inserting account username="${usernameUpper}" ip=${ip}`)
+    // acoreIp is safe for VARCHAR(15): IPv4 or '127.0.0.1' for IPv6 clients.
+    // The real client IP (normalizedIp) is recorded in cms_logs below.
+    if (clientIsIPv6) {
+      console.log(`[register] IPv6 client ${normalizedIp} → storing '127.0.0.1' in last_ip (VARCHAR(15) limit)`)
+    }
+    console.log(`[register] inserting account username="${usernameUpper}" acoreIp=${acoreIp}`)
 
     // Insertar en acore_auth.account — sin sha_pass_hash (columna inexistente en master 2026)
     // executeAuth devuelve ResultSetHeader directamente; NO usar queryAuth() para INSERT
@@ -72,7 +85,7 @@ export async function POST(req: NextRequest) {
     const insertResult = await executeAuth(
       `INSERT INTO account (username, salt, verifier, email, reg_mail, joindate, last_ip, locked, online, expansion)
        VALUES (?, ?, ?, ?, ?, NOW(), ?, 0, 0, 2)`,
-      [usernameUpper, saltBuffer, verifierBuffer, email, email, ip],
+      [usernameUpper, saltBuffer, verifierBuffer, email, email, acoreIp],
     )
 
     const accountId = insertResult.insertId
@@ -89,10 +102,13 @@ export async function POST(req: NextRequest) {
       [accountId],
     )
 
-    // Log de registro (sin contraseñas ni credenciales)
+    // Log de registro — normalizedIp es la IP real del cliente (VARCHAR(45), soporta IPv6)
+    const logDetails = clientIsIPv6
+      ? `Nueva cuenta: ${usernameUpper} (IPv6; last_ip AzerothCore: 127.0.0.1)`
+      : `Nueva cuenta: ${usernameUpper}`
     await executeCms(
       'INSERT INTO cms_logs (account_id, action, details, ip) VALUES (?, ?, ?, ?)',
-      [accountId, 'REGISTRO', `Nueva cuenta: ${usernameUpper}`, ip],
+      [accountId, 'REGISTRO', logDetails, normalizedIp],
     )
 
     // Auto-login
@@ -105,7 +121,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     // Log de error sin exponer contraseñas ni credenciales
     const msg = err instanceof Error ? err.message : String(err)
-    console.error(`[register] error username="${username}" op=register msg="${msg}"`)
+    console.error(`[register] error username="${username}" op=register ip=${normalizedIp} msg="${msg}"`)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
