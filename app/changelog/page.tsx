@@ -2,6 +2,9 @@ import { queryCms } from '@/lib/db'
 import { ChangelogTimeline } from '@/components/changelog/ChangelogTimeline'
 import { GitBranch } from 'lucide-react'
 
+// Changelog edits also trigger on-demand revalidatePath; without this the page was frozen at build time
+export const revalidate = 300
+
 interface ChangelogEntry {
   id: number
   version: string

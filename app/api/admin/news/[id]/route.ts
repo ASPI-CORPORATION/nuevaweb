@@ -1,64 +1,116 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { requireGmLevel } from '@/lib/auth'
-import { queryCms, queryCmsFirst } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
+import { queryCmsFirst, executeCms } from '@/lib/db'
+import { newsPatchSchema, publishProblem, dbErrorResponse, logContentAction } from '@/lib/news.server'
+import { sanitizeRichHtml, makeExcerpt } from '@/lib/sanitize'
+import { slugify } from '@/lib/content-config'
+import { revalidateNewsPages } from '@/lib/revalidate'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
-const schema = z.object({
-  title: z.string().min(3).max(200).optional(),
-  excerpt: z.string().min(10).max(500).optional(),
-  content: z.string().min(10).optional(),
-  image: z.string().url().optional().or(z.literal('')),
-  category: z.enum(['Actualización', 'Evento', 'Mantenimiento', 'Comunidad', 'PvP']).optional(),
-  published: z.boolean().optional(),
-  pinned: z.boolean().optional(),
-})
+interface NewsRow {
+  id: number
+  slug: string
+  title: string
+  excerpt: string | null
+  content: string
+  image: string | null
+  category: string
+  published: number
+  pinned: number
+}
+
+function parseId(raw: string) {
+  const id = Number(raw)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const result = await requireGmLevel(req, 3)
+  const result = await requireRole(req, 'admin')
   if (result instanceof Response) return result
-  const { id } = await params
+  const id = parseId((await params).id)
+  if (!id) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+
   const news = await queryCmsFirst('SELECT * FROM cms_news WHERE id = ?', [id])
-  if (!news) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
+  if (!news) return NextResponse.json({ error: 'Noticia no encontrada' }, { status: 404 })
   return NextResponse.json({ news })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const result = await requireGmLevel(req, 3)
-  if (result instanceof Response) return result
-  const { id } = await params
+  const admin = await requireRole(req, 'admin')
+  if (admin instanceof Response) return admin
+  const id = parseId((await params).id)
+  if (!id) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 
   let body: unknown
   try { body = await req.json() } catch {
     return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
   }
-
-  const parsed = schema.safeParse(body)
+  const parsed = newsPatchSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+  const p = parsed.data
+  if (Object.keys(p).length === 0) return NextResponse.json({ error: 'Sin cambios' }, { status: 400 })
 
-  const d = parsed.data
-  const fields: string[] = []
-  const values: unknown[] = []
+  const current = await queryCmsFirst<NewsRow>('SELECT * FROM cms_news WHERE id = ?', [id])
+  if (!current) return NextResponse.json({ error: 'Noticia no encontrada' }, { status: 404 })
 
-  if (d.title !== undefined) { fields.push('title = ?'); values.push(d.title) }
-  if (d.excerpt !== undefined) { fields.push('excerpt = ?'); values.push(d.excerpt) }
-  if (d.content !== undefined) { fields.push('content = ?'); values.push(d.content) }
-  if (d.image !== undefined) { fields.push('image = ?'); values.push(d.image || null) }
-  if (d.category !== undefined) { fields.push('category = ?'); values.push(d.category) }
-  if (d.published !== undefined) { fields.push('published = ?'); values.push(d.published ? 1 : 0) }
-  if (d.pinned !== undefined) { fields.push('pinned = ?'); values.push(d.pinned ? 1 : 0) }
+  const content = p.content !== undefined ? sanitizeRichHtml(p.content) : current.content
+  const next = {
+    title: p.title ?? current.title,
+    // URL stays stable on title edits; only changes when the slug is edited explicitly
+    slug: p.slug !== undefined ? slugify(p.slug || p.title || current.title) : current.slug,
+    content,
+    excerpt: p.excerpt !== undefined
+      ? (p.excerpt || makeExcerpt(content, 300)).slice(0, 500)
+      : (current.excerpt ?? makeExcerpt(content, 300)),
+    image: p.image !== undefined ? (p.image || null) : current.image,
+    category: p.category ?? current.category,
+    published: p.published ?? !!current.published,
+    pinned: p.pinned ?? !!current.pinned,
+  }
+  if (next.slug.length < 3) return NextResponse.json({ error: 'El slug debe tener al menos 3 caracteres' }, { status: 400 })
+  if (next.published) {
+    const problem = publishProblem(next)
+    if (problem) return NextResponse.json({ error: problem }, { status: 400 })
+  }
 
-  if (fields.length === 0) return NextResponse.json({ error: 'Sin cambios' }, { status: 400 })
-  fields.push('updated_at = NOW()')
-  values.push(id)
+  try {
+    await executeCms(
+      `UPDATE cms_news SET title = ?, slug = ?, excerpt = ?, content = ?, image = ?, category = ?,
+              published = ?, pinned = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [next.title, next.slug, next.excerpt, next.content, next.image, next.category,
+        next.published ? 1 : 0, next.pinned ? 1 : 0, id]
+    )
+  } catch (err) {
+    return dbErrorResponse(err, 'news:update')
+  }
 
-  await queryCms(`UPDATE cms_news SET ${fields.join(', ')} WHERE id = ?`, values)
-  return NextResponse.json({ success: true })
+  let action = 'NEWS_UPDATE'
+  if (!current.published && next.published) action = 'NEWS_PUBLISH'
+  else if (current.published && !next.published) action = 'NEWS_UNPUBLISH'
+  const { normalizedIp } = normalizeIP(getClientIP(req.headers))
+  await logContentAction(admin.id, action, `${admin.username} modificó la noticia #${id} "${next.title}"`, normalizedIp)
+  revalidateNewsPages([current.slug, next.slug])
+
+  return NextResponse.json({ success: true, slug: next.slug, published: next.published, pinned: next.pinned })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const result = await requireGmLevel(req, 3)
-  if (result instanceof Response) return result
-  const { id } = await params
-  await queryCms('DELETE FROM cms_news WHERE id = ?', [id])
+  const admin = await requireRole(req, 'admin')
+  if (admin instanceof Response) return admin
+  const id = parseId((await params).id)
+  if (!id) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+
+  const current = await queryCmsFirst<NewsRow>('SELECT id, slug, title FROM cms_news WHERE id = ?', [id])
+  if (!current) return NextResponse.json({ error: 'Noticia no encontrada' }, { status: 404 })
+
+  try {
+    await executeCms('DELETE FROM cms_news WHERE id = ?', [id])
+  } catch (err) {
+    return dbErrorResponse(err, 'news:delete')
+  }
+  const { normalizedIp } = normalizeIP(getClientIP(req.headers))
+  await logContentAction(admin.id, 'NEWS_DELETE', `${admin.username} eliminó la noticia #${id} "${current.title}"`, normalizedIp)
+  revalidateNewsPages([current.slug])
   return NextResponse.json({ success: true })
 }

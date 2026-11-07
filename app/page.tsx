@@ -8,6 +8,9 @@ import { TopPvPSection } from '@/components/home/TopPvPSection'
 import { HowToStartSection } from '@/components/home/HowToStartSection'
 import { DiscordSection } from '@/components/home/DiscordSection'
 
+// News, server status and PvP top read live DB data; without this the page was frozen at build time
+export const revalidate = 60
+
 export default function HomePage() {
   return (
     <div className="relative">

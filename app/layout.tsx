@@ -8,6 +8,7 @@ import { MaintenanceBanner } from '@/components/layout/MaintenanceBanner'
 import { Toaster } from '@/components/ui/toaster'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://wowargentina.com.ar'),
   title: 'WoW Argentina - Dominá Rasganorte',
   description: 'Servidor privado de World of Warcraft Wrath of the Lich King 3.3.5a. Tres caminos: Aventurero Blizzlike, Instant 80, Leveo Rápido. Sets Custom argentinos. ¡Únite a la comunidad!',
   keywords: 'WoW Argentina, World of Warcraft privado, Wrath of the Lich King, WotLK 3.3.5a, AzerothCore, servidor WoW Argentina',
@@ -39,7 +40,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <MaintenanceBanner />
         </Suspense>
         <Navbar />
-        <main className="relative z-10">{children}</main>
+        {/* No z-index here: it would trap every page modal below the fixed navbar */}
+        <main className="relative">{children}</main>
         <Footer />
         <Toaster />
       </body>
