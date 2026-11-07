@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { queryCms, queryCmsFirst, queryCharactersFirst } from '@/lib/db'
 import { sendMailInGame } from '@/lib/soap'
 import { rateLimit } from '@/lib/rate-limit'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const schema = z.object({
   itemId: z.number().positive(),
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
     // Log
     await queryCms(
       'INSERT INTO cms_logs (account_id, action, details, ip) VALUES (?, ?, ?, ?)',
-      [user.id, 'SHOP_BUY', `Compra: ${item.name} (${item.item_entry}) para ${characterName} - ${item.price_coins} MA`, req.headers.get('x-forwarded-for') ?? 'unknown']
+      [user.id, 'SHOP_BUY', `Compra: ${item.name} (${item.item_entry}) para ${characterName} - ${item.price_coins} MA`, normalizeIP(getClientIP(req.headers)).normalizedIp]
     )
 
     return NextResponse.json({

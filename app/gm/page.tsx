@@ -1,12 +1,11 @@
-import { getSession, getFullGmLevel } from '@/lib/auth'
+import { requirePageRole } from '@/lib/page-guard'
 import { queryAuth, queryCms } from '@/lib/db'
 import { Users, MessageSquare, Shield, Activity } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 export default async function GmDashboard() {
-  const session = await getSession()
-  if (!session) return null
+  await requirePageRole('gm', '/gm')
 
   let onlinePlayers = 0
   let openTickets = 0

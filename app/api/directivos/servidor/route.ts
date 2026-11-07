@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireDirectivo, logDirectivoAction } from '@/lib/directivos'
 import { getServerStatus, sendAnnounce, reloadConfig } from '@/lib/soap'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const schema = z.object({
   action: z.enum(['announce', 'reload_config', 'get_status']),
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
   const { action, message } = parsed.data
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const ip = normalizeIP(getClientIP(req.headers)).normalizedIp
 
   let soapResult: { success: boolean; result: string } = { success: false, result: '' }
 

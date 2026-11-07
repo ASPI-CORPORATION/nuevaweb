@@ -1,14 +1,29 @@
 import { queryCms } from '@/lib/db'
+import { requireRole, getSessionFromRequest, type AuthorizedUser } from '@/lib/auth'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 import type { NextRequest } from 'next/server'
 
 /**
- * Verifies gmlevel = 10. Returns the session object or a 403 response.
- * Also logs the action to cms_directivos_logs.
+ * DB-verified Directivo check for API routes (gmlevel 10 legacy, RBAC Owner/Co-Owner,
+ * or DIRECTIVOS_ACCOUNT_IDS). Denied attempts are written to cms_logs.
  */
-export async function requireDirectivo(req: NextRequest) {
-  const { requireGmLevel } = await import('@/lib/auth')
-  const result = await requireGmLevel(req, 10)
+export async function requireDirectivo(req: NextRequest): Promise<AuthorizedUser | Response> {
+  const result = await requireRole(req, 'directivo')
+  if (result instanceof Response && result.status === 403) {
+    const session = getSessionFromRequest(req)
+    const { normalizedIp } = normalizeIP(getClientIP(req.headers))
+    await logUnauthorizedAttempt(session?.id ?? null, session?.username ?? 'anónimo', req.nextUrl.pathname, normalizedIp)
+  }
   return result
+}
+
+export async function logUnauthorizedAttempt(accountId: number | null, username: string, path: string, ip: string) {
+  try {
+    await queryCms(
+      'INSERT INTO cms_logs (account_id, action, details, ip) VALUES (?, ?, ?, ?)',
+      [accountId, 'INTENTO DE ACCESO NO AUTORIZADO', `Intento de acceso a ${path} - Usuario: ${username}`, ip]
+    )
+  } catch {}
 }
 
 export async function logDirectivoAction(

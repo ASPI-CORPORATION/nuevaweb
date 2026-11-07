@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireGmLevel, getFullGmLevel } from '@/lib/auth'
+import { requireGmLevel, getFullGmLevel, getAccountAccess } from '@/lib/auth'
+import { ROLE_RANK } from '@/lib/roles'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 import { queryAuth, queryAuthFirst, queryCms } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
@@ -49,19 +51,24 @@ export async function PATCH(req: NextRequest) {
   const { accountId, action, gmlevel } = body as { accountId: number; action: string; gmlevel?: number }
   if (!accountId || !action) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
 
-  const targetGm = await getFullGmLevel(accountId)
-  const adminGm = await getFullGmLevel(admin.id)
+  if (accountId === admin.id) {
+    return NextResponse.json({ error: 'No podés modificar tu propia cuenta' }, { status: 403 })
+  }
 
-  // Hierarchy enforcement: admin can't touch equal or higher level
-  if (targetGm >= adminGm) {
+  // Hierarchy on effective roles (gmlevel + verified RBAC rank), not raw gmlevel numbers
+  const target = await getAccountAccess(accountId)
+  if (ROLE_RANK[target.role] >= ROLE_RANK[admin.role]) {
     return NextResponse.json({ error: 'No podés modificar a alguien de tu mismo nivel o superior' }, { status: 403 })
   }
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const { normalizedIp: ip } = normalizeIP(getClientIP(req.headers))
 
   if (action === 'set_gmlevel') {
-    if (gmlevel === undefined || gmlevel < 0 || gmlevel >= adminGm) {
-      return NextResponse.json({ error: 'Nivel de GM inválido' }, { status: 400 })
+    // Admin can grant up to GM (2); Directivo up to native Administrator (3).
+    // Directivo status itself is managed only from /directivos/staff.
+    const maxGrant = admin.role === 'directivo' ? 3 : 2
+    if (gmlevel === undefined || !Number.isInteger(gmlevel) || gmlevel < 0 || gmlevel > maxGrant) {
+      return NextResponse.json({ error: `Nivel de GM inválido (máximo ${maxGrant})` }, { status: 400 })
     }
     if (gmlevel === 0) {
       await queryAuth('DELETE FROM account_access WHERE id = ?', [accountId])

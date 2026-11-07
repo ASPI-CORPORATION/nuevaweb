@@ -1,20 +1,15 @@
-import { redirect } from 'next/navigation'
-import { getSession, getFullGmLevel } from '@/lib/auth'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import { requirePageRole } from '@/lib/page-guard'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession()
-  if (!session) redirect('/login?redirect=/admin')
-
-  const gmlevel = await getFullGmLevel(session.id)
-  if (gmlevel < 3) redirect('/')
+  const user = await requirePageRole('admin', '/admin')
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #050A14 0%, #0a0f1e 50%, #050A14 100%)' }}>
-      <div className="max-w-screen-xl mx-auto px-4 py-8">
-        <div className="flex gap-6">
-          <AdminSidebar user={{ ...session, gmlevel }} />
-          <main className="flex-1 min-w-0">{children}</main>
+    <div className="min-h-screen pt-16 bg-[radial-gradient(ellipse_at_top,rgba(116,172,223,0.08),transparent_60%)]">
+      <div className="max-w-screen-xl mx-auto px-4 pb-10 lg:py-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          <AdminSidebar user={{ username: user.username, role: user.role }} />
+          <main className="flex-1 min-w-0 pt-4 lg:pt-0">{children}</main>
         </div>
       </div>
     </div>

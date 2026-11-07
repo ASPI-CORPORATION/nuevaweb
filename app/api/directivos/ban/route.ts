@@ -4,6 +4,7 @@ import { requireDirectivo, logDirectivoAction } from '@/lib/directivos'
 import { queryAuth, queryAuthFirst } from '@/lib/db'
 import { queryCms } from '@/lib/db'
 import { banAccount, unbanAccount, banIP } from '@/lib/soap'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const schema = z.object({
   action: z.enum(['ban_account', 'unban_account', 'ban_ip']),
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
   const { action, identifier, reason, duration } = parsed.data
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const ip = normalizeIP(getClientIP(req.headers)).normalizedIp
 
   let targetId: number | null = null
   let soapResult = { success: false, result: '' }

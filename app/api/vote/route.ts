@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { queryCms, queryCmsFirst } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendMailInGame } from '@/lib/soap'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const schema = z.object({
   site: z.enum(['TopG', 'WoW-Servers', 'Top100Arena']),
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (result instanceof Response) return result
   const user = result
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const ip = normalizeIP(getClientIP(req.headers)).normalizedIp
   const rl = rateLimit(`vote:${user.id}`, 5, 60 * 1000)
   if (!rl.success) return NextResponse.json({ error: 'Demasiados intentos' }, { status: 429 })
 

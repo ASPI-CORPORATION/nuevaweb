@@ -17,6 +17,7 @@ import { requireDirectivo, logDirectivoAction } from '@/lib/directivos'
 import { queryAuth, queryAuthFirst, queryCms, withAuthTransaction } from '@/lib/db'
 import { RBAC_MIN, RBAC_MAX, getRank, canAssignRank } from '@/lib/rbac'
 import { getAccountRbacRank, countOwners } from '@/lib/rbac.server'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
   const { accountId, rankId, reason } = parsed.data
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const ip = normalizeIP(getClientIP(req.headers)).normalizedIp
 
   // ── Verify target exists ────────────────────────────────────────────────────
   const target = await queryAuthFirst<{ id: number; username: string }>(

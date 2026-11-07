@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireDirectivo, logDirectivoAction } from '@/lib/directivos'
 import { queryCms } from '@/lib/db'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const coinSchema = z.object({
   action: z.enum(['give_coins', 'take_coins', 'mass_give']),
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
   }
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const ip = normalizeIP(getClientIP(req.headers)).normalizedIp
 
   // Try promo creation
   const promoParsed = promoSchema.safeParse(body)

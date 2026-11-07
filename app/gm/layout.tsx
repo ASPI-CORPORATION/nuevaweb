@@ -1,20 +1,15 @@
-import { getSession, getFullGmLevel } from '@/lib/auth'
-import { redirect } from 'next/navigation'
 import { GmSidebar } from '@/components/gm/GmSidebar'
+import { requirePageRole } from '@/lib/page-guard'
 
 export default async function GmLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession()
-  if (!session) redirect('/login')
-
-  const gmlevel = await getFullGmLevel(session.id)
-  if (gmlevel < 2) redirect('/')
+  const user = await requirePageRole('gm', '/gm')
 
   return (
-    <div className="min-h-screen pt-20 bg-gradient-to-b from-slate-950 to-green-950/5">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex gap-6">
-          <GmSidebar username={session.username} gmlevel={gmlevel} />
-          <main className="flex-1 min-w-0">{children}</main>
+    <div className="min-h-screen pt-16 bg-[radial-gradient(ellipse_at_top,rgba(74,222,128,0.05),transparent_60%)]">
+      <div className="max-w-7xl mx-auto px-4 pb-10 lg:py-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          <GmSidebar username={user.username} role={user.role} />
+          <main className="flex-1 min-w-0 pt-4 lg:pt-0">{children}</main>
         </div>
       </div>
     </div>

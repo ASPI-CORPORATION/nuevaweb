@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireGmLevel } from '@/lib/auth'
 import { queryAuth, queryAuthFirst, queryCms } from '@/lib/db'
 import { banAccount, unbanAccount, kickPlayer, revivePlayer, mutePlayer, unmutePlayer } from '@/lib/soap'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const schema = z.object({
   action: z.enum(['ban', 'unban', 'kick', 'revive', 'mute', 'unmute', 'give_coins']),
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
   const data = parsed.data
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const ip = normalizeIP(getClientIP(req.headers)).normalizedIp
 
   let soapResult: { success: boolean; result: string } = { success: true, result: '' }
   let message = ''

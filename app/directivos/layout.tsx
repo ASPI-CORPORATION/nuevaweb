@@ -1,56 +1,25 @@
-import { redirect } from 'next/navigation'
-import { cookies, headers } from 'next/headers'
-import { getSession, getFullGmLevel } from '@/lib/auth'
-import { queryCms } from '@/lib/db'
+import { Crown } from 'lucide-react'
 import DirectivosSidebar from '@/components/directivos/DirectivosSidebar'
+import { requirePageRole } from '@/lib/page-guard'
+import { getRank } from '@/lib/rbac'
 
 export default async function DirectivosLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession()
-
-  if (!session) redirect('/login?redirect=/directivos')
-
-  const gmlevel = await getFullGmLevel(session.id)
-
-  if (gmlevel < 10) {
-    // Log unauthorized access attempt
-    const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
-    try {
-      await queryCms(
-        'INSERT INTO cms_logs (account_id, action, details, ip) VALUES (?, ?, ?, ?)',
-        [
-          session.id,
-          'INTENTO DE ACCESO NO AUTORIZADO',
-          `Intento de acceso a /directivos - Usuario: ${session.username} (gmlevel: ${gmlevel})`,
-          ip,
-        ]
-      )
-    } catch {}
-    redirect('/')
-  }
+  const user = await requirePageRole('directivo', '/directivos')
+  const rankName = user.access.rbacRankId ? getRank(user.access.rbacRankId)?.name ?? null : null
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: 'linear-gradient(135deg, #0a0500 0%, #150b00 40%, #0a0500 100%)',
-        boxShadow: 'inset 0 0 200px rgba(255, 215, 0, 0.03)',
-      }}
-    >
-      <div
-        className="border-b"
-        style={{ borderColor: 'rgba(255, 215, 0, 0.15)', background: 'rgba(255, 215, 0, 0.03)' }}
-      >
-        <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-3">
-          <span className="text-yellow-400 text-lg">👑</span>
-          <span className="font-['Cinzel'] font-bold text-yellow-400 text-sm tracking-wider">PANEL DE DIRECTIVOS</span>
-          <span className="text-yellow-600 text-xs ml-auto">Acceso Total — Nivel 10</span>
+    <div className="min-h-screen pt-16 bg-[radial-gradient(ellipse_at_top,rgba(246,180,14,0.07),transparent_60%)]">
+      <div className="border-b border-[#F6B40E]/15 bg-[#F6B40E]/[0.03]">
+        <div className="max-w-screen-xl mx-auto px-4 py-2.5 flex items-center gap-2 text-xs sm:text-sm">
+          <Crown className="w-4 h-4 text-[#F6B40E] shrink-0" />
+          <span className="font-['Cinzel'] font-bold text-[#F6B40E] tracking-wider">PANEL DE DIRECTIVOS</span>
+          <span className="ml-auto text-[#c9a24a] truncate">Control administrativo completo</span>
         </div>
       </div>
-      <div className="max-w-screen-xl mx-auto px-4 py-8">
-        <div className="flex gap-6">
-          <DirectivosSidebar user={{ ...session, gmlevel }} />
-          <main className="flex-1 min-w-0">{children}</main>
+      <div className="max-w-screen-xl mx-auto px-4 pb-10 lg:py-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          <DirectivosSidebar user={{ username: user.username, role: user.role, rankName }} />
+          <main className="flex-1 min-w-0 pt-4 lg:pt-0">{children}</main>
         </div>
       </div>
     </div>

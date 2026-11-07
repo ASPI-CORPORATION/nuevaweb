@@ -1,7 +1,7 @@
 /**
  * Tests for lib/ip-utils — IP normalization for AzerothCore VARCHAR(15) columns.
  *
- * Run with:  node --test __tests__/ip-utils.test.mjs
+ * Run with:  npm test
  *
  * Uses the Node.js built-in test runner (Node 18+). No extra dependencies needed.
  */
@@ -9,46 +9,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-// ── Import the functions under test ──────────────────────────────────────────
-// Because lib/ip-utils.ts is TypeScript we import the compiled output via ts-node,
-// OR we duplicate the logic here. Since there is no ts-node in devDeps we
-// inline the pure-JS equivalents — these must stay in sync with lib/ip-utils.ts.
-
-function isIPv4(ip) {
-  return /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)
-}
-
-function isIPv6(ip) {
-  return ip.includes(':')
-}
-
-function extractIPv4FromMapped(ip) {
-  const m = ip.match(/^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i)
-  return m ? m[1] : null
-}
-
-function normalizeIP(raw) {
-  const trimmed = raw.trim()
-  const mapped = extractIPv4FromMapped(trimmed)
-  if (mapped) {
-    return { normalizedIp: mapped, acoreIp: mapped, isIPv6: false }
-  }
-  if (isIPv4(trimmed)) {
-    return { normalizedIp: trimmed, acoreIp: trimmed, isIPv6: false }
-  }
-  const isV6 = isIPv6(trimmed)
-  return {
-    normalizedIp: trimmed || 'unknown',
-    acoreIp: '127.0.0.1',
-    isIPv6: isV6,
-  }
-}
-
-function getClientIP(headers) {
-  const forwarded = headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0].trim()
-  return headers.get('x-real-ip') ?? 'unknown'
-}
+import { isIPv4, isIPv6, extractIPv4FromMapped, normalizeIP, getClientIP } from '../lib/ip-utils.ts'
 
 // ── Helper to build a minimal headers-like object ────────────────────────────
 function makeHeaders(map) {

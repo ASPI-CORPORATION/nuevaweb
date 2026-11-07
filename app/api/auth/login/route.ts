@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { queryAuthFirst, queryCms } from '@/lib/db'
+import { queryAuthFirst, queryCms, executeAuth } from '@/lib/db'
 import { verifyPassword } from '@/lib/srp6'
 import { rateLimit } from '@/lib/rate-limit'
-import { signToken, createSessionCookie, getFullGmLevel } from '@/lib/auth'
+import { signToken, createSessionCookie, getAccountAccess } from '@/lib/auth'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const schema = z.object({
   username: z.string().min(1).max(50),
@@ -25,7 +26,7 @@ interface BanRow {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const { normalizedIp: ip, acoreIp } = normalizeIP(getClientIP(req.headers))
 
   const rl = rateLimit(`login:${ip}`, 10, 15 * 60 * 1000)
   if (!rl.success) {
@@ -73,13 +74,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 })
     }
 
-    // Obtener GM level real desde account_access
-    const gmlevel = await getFullGmLevel(account.id)
+    const access = await getAccountAccess(account.id)
+    const gmlevel = access.gmlevel
 
-    // Actualizar last_login y last_ip
-    await queryAuthFirst(
+    // last_ip es VARCHAR(15) en AzerothCore: solo IPv4 (IPv6 → '127.0.0.1', la real queda en cms_logs)
+    await executeAuth(
       'UPDATE account SET last_login = NOW(), last_ip = ? WHERE id = ?',
-      [ip, account.id]
+      [acoreIp, account.id]
     )
 
     // Log de login
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
       expansion: account.expansion,
     })
 
-    const response = NextResponse.json({ success: true, user: { id: account.id, username: account.username, gmlevel } })
+    const response = NextResponse.json({ success: true, user: { id: account.id, username: account.username, gmlevel, role: access.role } })
     response.headers.set('Set-Cookie', createSessionCookie(token))
     return response
 

@@ -1,12 +1,11 @@
-import { getSession, getFullGmLevel } from '@/lib/auth'
+import { requirePageRole } from '@/lib/page-guard'
 import { queryCms } from '@/lib/db'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { FileText } from 'lucide-react'
 
 export default async function GmLogsPage({ searchParams }: { searchParams: Promise<{ action?: string; page?: string }> }) {
-  const session = await getSession()
-  if (!session) return null
+  await requirePageRole('gm', '/gm/logs')
 
   const params = await searchParams
   const page = parseInt(params.page || '1')

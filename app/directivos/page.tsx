@@ -1,4 +1,4 @@
-import { getSession, getFullGmLevel } from '@/lib/auth'
+import { requirePageRole } from '@/lib/page-guard'
 import { queryAuth, queryCms, queryCharacters } from '@/lib/db'
 import { getServerStatus } from '@/lib/soap'
 import { Users, Shield, Ban, TrendingUp, Server, AlertTriangle } from 'lucide-react'
@@ -28,6 +28,7 @@ async function getDirectivoStats() {
 }
 
 export default async function DirectivosPage() {
+  await requirePageRole('directivo', '/directivos')
   const stats = await getDirectivoStats()
 
   const statCards = [

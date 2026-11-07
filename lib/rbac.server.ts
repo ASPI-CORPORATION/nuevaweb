@@ -4,21 +4,11 @@
  */
 
 import { queryAuthFirst } from '@/lib/db'
-import { RBAC_MIN, RBAC_MAX } from '@/lib/rbac'
+import { getVerifiedRbacRank } from '@/lib/auth'
 
-/**
- * Returns the highest custom RBAC rank ID (90000–90009) assigned to accountId.
- * Returns null if no custom rank is assigned.
- */
+/** Highest registered custom RBAC rank (90000–90009) for the account, or null. */
 export async function getAccountRbacRank(accountId: number): Promise<number | null> {
-  const row = await queryAuthFirst<{ permission: number | null }>(
-    `SELECT MAX(permission) AS permission
-     FROM rbac_account_permissions
-     WHERE id = ? AND permission BETWEEN ? AND ? AND granted = 1 AND realm_id = -1`,
-    [accountId, RBAC_MIN, RBAC_MAX]
-  )
-  const val = row?.permission ?? null
-  return val !== null ? Number(val) : null
+  return getVerifiedRbacRank(accountId)
 }
 
 /**

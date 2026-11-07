@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/auth'
+import { requirePageRole } from '@/lib/page-guard'
 import { queryAuth, queryCharacters, queryCms } from '@/lib/db'
 import AdminStatsCharts from '@/components/admin/AdminStatsCharts'
 import { Users, Newspaper, ShoppingCart, TrendingUp } from 'lucide-react'
@@ -36,6 +36,7 @@ async function getStats() {
 }
 
 export default async function AdminPage() {
+  await requirePageRole('admin', '/admin')
   const stats = await getStats()
 
   const statCards = [

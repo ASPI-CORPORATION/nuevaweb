@@ -9,7 +9,11 @@ import { Suspense } from 'react'
 
 function LoginForm() {
   const params = useSearchParams()
-  const redirect = params.get('redirect') || '/cuenta'
+  const requested = params.get('redirect') || ''
+  // Only same-origin paths: blocks open redirects like ?redirect=https://evil.example or //evil.example
+  const redirect = requested.startsWith('/') && !requested.startsWith('//') && !requested.startsWith('/\\')
+    ? requested
+    : '/cuenta'
 
   const [form, setForm] = useState({ username: '', password: '' })
   const [showPass, setShowPass] = useState(false)

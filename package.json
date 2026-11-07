@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test __tests__/**/*.test.mjs"
+    "test": "node --no-warnings --test \"__tests__/*.test.mjs\" \"tests/*.test.mjs\""
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireDirectivo, logDirectivoAction } from '@/lib/directivos'
 import { queryAuth, queryAuthFirst, executeAuth } from '@/lib/db'
+import { getAccountAccess } from '@/lib/auth'
+import { getRankLevel } from '@/lib/rbac'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const setGmSchema = z.object({
   accountId: z.number().int().positive(),
@@ -87,13 +90,33 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
   const { accountId, gmlevel, reason } = parsed.data
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const ip = normalizeIP(getClientIP(req.headers)).normalizedIp
 
   const target = await queryAuthFirst<{ id: number; username: string }>(
     'SELECT id, username FROM account WHERE id = ?',
     [accountId]
   )
   if (!target) return NextResponse.json({ error: 'Cuenta no encontrada' }, { status: 404 })
+
+  if (accountId === directivo.id) {
+    return NextResponse.json(
+      { error: 'No podés modificar tu propio nivel de GM (evita perder el acceso al panel).' },
+      { status: 403 }
+    )
+  }
+
+  const targetAccess = await getAccountAccess(accountId)
+  if (targetAccess.role === 'directivo') {
+    // Unranked Directivos (legacy gmlevel 10 / env) count as top level
+    const callerLevel = directivo.access.rbacRankId ? getRankLevel(directivo.access.rbacRankId) : 9
+    const targetLevel = targetAccess.rbacRankId ? getRankLevel(targetAccess.rbacRankId) : 9
+    if (targetLevel >= callerLevel) {
+      return NextResponse.json(
+        { error: 'No podés modificar a un Directivo de igual o mayor jerarquía.' },
+        { status: 403 }
+      )
+    }
+  }
 
   if (gmlevel === 0) {
     await executeAuth('DELETE FROM account_access WHERE id = ?', [accountId])

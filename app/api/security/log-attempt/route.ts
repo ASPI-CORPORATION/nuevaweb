@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionFromRequest } from '@/lib/auth'
 import { queryCms } from '@/lib/db'
+import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 export async function POST(req: NextRequest) {
   try {
     const session = getSessionFromRequest(req)
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+    const ip = normalizeIP(getClientIP(req.headers)).normalizedIp
     const { path } = await req.json().catch(() => ({ path: '/directivos' }))
 
     await queryCms(
