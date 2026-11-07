@@ -36,10 +36,17 @@ CREATE TABLE IF NOT EXISTS `cms_changelog` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `version`     VARCHAR(20) NOT NULL COMMENT 'Ej: v2.1.0',
   `title`       VARCHAR(255) NOT NULL,
+  `image`       VARCHAR(500) NULL DEFAULT NULL,
+  `summary`     VARCHAR(500) NULL DEFAULT NULL,
+  `content`     LONGTEXT NULL,
   `date`        DATE NOT NULL,
-  `changes`     JSON NOT NULL COMMENT '[{"type":"NUEVO","text":"..."}]',
+  `changes`     JSON NOT NULL COMMENT '[{"type":"Nuevo","text":"..."}]',
   `type`        ENUM('Mayor','Menor','Hotfix') NOT NULL DEFAULT 'Menor',
+  `category`    ENUM('Nuevo','Corrección','Balance','Evento') NOT NULL DEFAULT 'Nuevo',
+  `published`   TINYINT(1) NOT NULL DEFAULT 1,
+  `author_name` VARCHAR(50) NULL DEFAULT NULL,
   `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_date` (`date` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -178,7 +185,7 @@ CREATE TABLE IF NOT EXISTS `cms_config` (
 INSERT IGNORE INTO `cms_config` (`key_name`, `value`) VALUES
   ('maintenance_mode', '0'),
   ('motd', 'Bienvenidos a WoW Argentina - ¡Dominá Rasganorte!'),
-  ('discord_url', 'https://discord.gg/wowargentina'),
+  ('discord_url', 'https://discord.gg/9KmrAPJzjn'),
   ('topg_url', 'https://topg.org/server-vote-wowargentina'),
   ('wowservers_url', 'https://www.wow-servers.eu/server-vote-wowargentina'),
   ('vote_cooldown_hours', '12'),

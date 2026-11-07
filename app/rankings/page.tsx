@@ -4,7 +4,7 @@ import { RankingsTabs } from '@/components/rankings/RankingsTabs'
 import { Trophy } from 'lucide-react'
 
 // Rankings read live character data; without this the page was frozen at build time
-export const revalidate = 300
+export const revalidate = 60
 
 const CLASS_NAMES: Record<number, string> = {
   1: 'Guerrero', 2: 'Paladín', 3: 'Cazador', 4: 'Pícaro',
