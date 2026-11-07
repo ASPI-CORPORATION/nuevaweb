@@ -53,7 +53,13 @@ export function Navbar() {
     return () => { alive = false }
   }, [pathname])
 
-  useEffect(() => { setDrawer(false); setMenu(false) }, [pathname])
+  // Close menus on navigation (state reset during render, not in an effect)
+  const [routeSeen, setRouteSeen] = useState(pathname)
+  if (routeSeen !== pathname) {
+    setRouteSeen(pathname)
+    setDrawer(false)
+    setMenu(false)
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)

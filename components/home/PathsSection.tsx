@@ -21,10 +21,10 @@ const paths = [
   {
     num: '02',
     Icon: Zap,
-    accent: '#FFD700',
-    glow: 'rgba(255,215,0,0.18)',
-    bgGlow: 'rgba(255,215,0,0.04)',
-    borderHover: 'rgba(255,215,0,0.4)',
+    accent: '#F6B40E',
+    glow: 'rgba(246, 180, 14,0.18)',
+    bgGlow: 'rgba(246, 180, 14,0.04)',
+    borderHover: 'rgba(246, 180, 14,0.4)',
     title: 'Instant 80',
     subtitle: 'Directo al endgame',
     desc: 'Creás el personaje, ya sos nivel 80 con gear inicial. Arenas, battlegrounds, raids de alto nivel desde el primer momento. Sin leveo, puro contenido top.',
@@ -82,9 +82,9 @@ export function PathsSection() {
               className="group relative rounded-2xl p-6 flex flex-col transition-all duration-300 cursor-pointer"
               style={{
                 background: p.featured
-                  ? `linear-gradient(160deg, rgba(255,215,0,0.06) 0%, rgba(10,20,40,0.85) 60%)`
+                  ? `linear-gradient(160deg, rgba(246, 180, 14,0.06) 0%, rgba(10,20,40,0.85) 60%)`
                   : 'rgba(10,20,40,0.65)',
-                border: `1px solid ${p.featured ? 'rgba(255,215,0,0.2)' : 'rgba(117,199,255,0.1)'}`,
+                border: `1px solid ${p.featured ? 'rgba(246, 180, 14,0.2)' : 'rgba(117,199,255,0.1)'}`,
                 backdropFilter: 'blur(14px)',
               }}
             >
@@ -97,7 +97,7 @@ export function PathsSection() {
               {/* Featured badge */}
               {p.featured && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full text-xs font-bold tracking-widest uppercase"
-                  style={{ background: 'linear-gradient(135deg, #FFD700, #b45309)', color: '#050A14' }}>
+                  style={{ background: 'linear-gradient(135deg, #F6B40E, #b45309)', color: '#050A14' }}>
                   Más Popular
                 </div>
               )}

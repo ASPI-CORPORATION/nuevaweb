@@ -52,13 +52,13 @@ export default function AdminTiendaPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-['Cinzel'] font-black text-3xl text-white">Tienda</h1>
-        <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-medium transition-colors">
+        <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-[#74ACDF] hover:bg-[#8cc0ec] text-[#050A14] font-semibold rounded-xl text-sm font-medium transition-colors">
           <Plus className="w-4 h-4" /> Nuevo item
         </button>
       </div>
 
       <div className="bg-slate-900/60 border border-slate-700/50 rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="table-scroll"><table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-slate-700/50">
               <th className="text-left px-5 py-3 text-slate-400 font-medium">Item</th>
@@ -94,34 +94,34 @@ export default function AdminTiendaPage() {
             ))}
             {items.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-500">No hay items en la tienda</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {modal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-5 sm:p-6 max-h-[90svh] overflow-y-auto overscroll-contain">
             <h2 className="font-['Cinzel'] font-bold text-xl text-white mb-5">{editId ? 'Editar item' : 'Nuevo item'}</h2>
             {error && <div className="mb-4 px-4 py-2 bg-red-500/15 border border-red-500/30 text-red-400 rounded-xl text-sm">{error}</div>}
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <input value={form.item_entry} onChange={e => setForm(f => ({ ...f, item_entry: e.target.value }))} placeholder="Item Entry (ID)" className="px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm" />
-                <input value={form.price_coins} onChange={e => setForm(f => ({ ...f, price_coins: e.target.value }))} placeholder="Precio (monedas)" className="px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm" />
+                <input value={form.item_entry} onChange={e => setForm(f => ({ ...f, item_entry: e.target.value }))} placeholder="Item Entry (ID)" className="px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm" />
+                <input value={form.price_coins} onChange={e => setForm(f => ({ ...f, price_coins: e.target.value }))} placeholder="Precio (monedas)" className="px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm" />
               </div>
-              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre del item" className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm" />
-              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Descripción" rows={2} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm resize-none" />
-              <input value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} placeholder="URL imagen (opcional)" className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm" />
+              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre del item" className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm" />
+              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Descripción" rows={2} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm resize-none" />
+              <input value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} placeholder="URL imagen (opcional)" className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm" />
               <div className="grid grid-cols-2 gap-3">
-                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value as ShopCategory }))} className="px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm">
+                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value as ShopCategory }))} className="px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm">
                   {CATS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <input value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Stock (-1 = infinito)" className="px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm" />
+                <input value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Stock (-1 = infinito)" className="px-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm" />
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                <input type="checkbox" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} className="accent-purple-500" /> Activo (visible en tienda)
+                <input type="checkbox" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} className="accent-[#74ACDF]" /> Activo (visible en tienda)
               </label>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={handleSave} disabled={saving} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-medium disabled:opacity-50 transition-colors text-sm">
+              <button onClick={handleSave} disabled={saving} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#74ACDF] hover:bg-[#8cc0ec] text-[#050A14] font-semibold rounded-xl font-medium disabled:opacity-50 transition-colors text-sm">
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />} {editId ? 'Guardar' : 'Crear'}
               </button>
               <button onClick={() => setModal(false)} className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors text-sm">Cancelar</button>

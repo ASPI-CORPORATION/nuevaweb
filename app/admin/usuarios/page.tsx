@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Search, ChevronUp } from 'lucide-react'
+import { notify } from '@/components/ui/toaster'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -35,11 +36,12 @@ export default function AdminUsuariosPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId, action: 'set_gmlevel', gmlevel: newGm }),
     })
+    const d = await res.json().catch(() => ({}))
     if (!res.ok) {
-      const d = await res.json()
-      alert(d.error)
+      notify.error(d.error || 'No se pudo cambiar el nivel')
       return
     }
+    notify.success('Nivel de GM actualizado')
     mutate()
     setSetting(null)
   }
@@ -52,13 +54,13 @@ export default function AdminUsuariosPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && setSearch(q)}
-            placeholder="Buscar por usuario o email..." className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm" />
+            placeholder="Buscar por usuario o email..." className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm" />
         </div>
-        <button onClick={() => setSearch(q)} className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-medium transition-colors">Buscar</button>
+        <button onClick={() => setSearch(q)} className="px-4 py-2.5 bg-[#74ACDF] hover:bg-[#8cc0ec] text-[#050A14] font-semibold rounded-xl text-sm font-medium transition-colors">Buscar</button>
       </div>
 
       <div className="bg-slate-900/60 border border-slate-700/50 rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="table-scroll"><table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-slate-700/50">
               <th className="text-left px-5 py-3 text-slate-400 font-medium">Usuario</th>
@@ -94,7 +96,7 @@ export default function AdminUsuariosPage() {
                           <option value={2}>GM (2)</option>
                           <option value={3}>Admin (3)</option>
                         </select>
-                        <button onClick={() => setGmlevel(a.id)} className="px-2 py-1 bg-purple-600 text-white rounded-lg text-xs">OK</button>
+                        <button onClick={() => setGmlevel(a.id)} className="px-2 py-1 bg-[#74ACDF] text-[#050A14] font-semibold rounded-lg text-xs">OK</button>
                         <button onClick={() => setSetting(null)} className="px-2 py-1 bg-slate-700 text-white rounded-lg text-xs">✕</button>
                       </div>
                     ) : (
@@ -108,7 +110,7 @@ export default function AdminUsuariosPage() {
             ))}
             {accounts.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-500">No hay resultados</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   )

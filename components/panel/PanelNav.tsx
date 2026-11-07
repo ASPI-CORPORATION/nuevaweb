@@ -35,7 +35,11 @@ export function PanelNav({ accent, title, username, roleLabel, badge: Badge, lin
   const reduce = useReducedMotion()
   const current = links.find(l => isActive(pathname, l)) ?? links[0]
 
-  useEffect(() => { setOpen(false) }, [pathname])
+  const [routeSeen, setRouteSeen] = useState(pathname)
+  if (routeSeen !== pathname) {
+    setRouteSeen(pathname)
+    setOpen(false)
+  }
 
   useEffect(() => {
     if (!open) return

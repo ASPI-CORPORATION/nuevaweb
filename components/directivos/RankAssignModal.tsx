@@ -65,7 +65,7 @@ export function RankAssignModal({ member, callerRankId, onClose, onSuccess }: Pr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+      <div className="w-full max-w-lg rounded-2xl shadow-2xl overflow-y-auto overscroll-contain max-h-[90svh]"
         style={{ background: dark, border: `1px solid ${gold}30` }}>
 
         {/* Header */}

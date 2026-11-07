@@ -2,20 +2,31 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { Download, Sword, Users, Zap, Shield } from 'lucide-react'
+import { motion, MotionConfig } from 'framer-motion'
+import { Download, UserPlus, Users, Copy, Check, Swords, Snowflake } from 'lucide-react'
+import { SolDeMayo } from '@/components/brand/SolDeMayo'
+import { DiscordIcon } from '@/components/brand/DiscordIcon'
+import { DISCORD_URL, SITE } from '@/lib/site-config'
 
-interface Particle { id: number; x: number; y: number; size: number; delay: number; dur: number }
+// Deterministic positions: identical on server and client (no hydration mismatch)
+const FLAKES = Array.from({ length: 22 }, (_, i) => ({
+  x: (i * 37 + 11) % 100,
+  y: (i * 53 + 7) % 100,
+  s: 1 + ((i * 7) % 3),
+  d: (i * 1.3) % 8,
+  t: 10 + ((i * 3) % 8),
+}))
 
-function useCounter(target: number | null, ms = 1400) {
+function useCounter(target: number | null, ms = 1200) {
   const [n, setN] = useState(0)
   useEffect(() => {
     if (target === null) return
-    const steps = 60; const inc = target / steps; let cur = 0
+    const steps = 40
+    let i = 0
     const t = setInterval(() => {
-      cur += inc
-      if (cur >= target) { setN(target); clearInterval(t) }
-      else setN(Math.floor(cur))
+      i++
+      setN(i >= steps ? target : Math.floor((target * i) / steps))
+      if (i >= steps) clearInterval(t)
     }, ms / steps)
     return () => clearInterval(t)
   }, [target, ms])
@@ -24,217 +35,142 @@ function useCounter(target: number | null, ms = 1400) {
 
 export function HeroSection() {
   const [online, setOnline] = useState<number | null>(null)
-  const [particles, setParticles] = useState<Particle[]>([])
+  const [copied, setCopied] = useState(false)
   const display = useCounter(online)
 
   useEffect(() => {
-    fetch('/api/stats/online').then(r => r.ok ? r.json() : { count: 0 }).then(d => setOnline(d.count ?? 0)).catch(() => setOnline(0))
+    fetch('/api/stats/online').then(r => (r.ok ? r.json() : { count: 0 })).then(d => setOnline(Number(d.count) || 0)).catch(() => setOnline(0))
   }, [])
 
-  useEffect(() => {
-    setParticles(Array.from({ length: 50 }, (_, i) => ({
-      id: i, x: Math.random() * 100, y: Math.random() * 100,
-      size: Math.random() * 2.5 + 0.5, delay: Math.random() * 10, dur: Math.random() * 8 + 10,
-    })))
-  }, [])
+  const copyRealmlist = async () => {
+    try {
+      await navigator.clipboard.writeText(`set realmlist ${SITE.realmlist}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {}
+  }
+
+  const fade = (delay: number) => ({ initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.55, delay } })
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-
-      {/* ── Background ─────────────────────────────────────────────── */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 110% 70% at 50% -5%, rgba(117,199,255,0.14) 0%, transparent 60%)' }} />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 50% 60% at 15% 60%, rgba(29,78,216,0.12) 0%, transparent 55%)' }} />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 50% 60% at 85% 40%, rgba(29,78,216,0.1) 0%, transparent 55%)' }} />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 55%, #050A14 100%)' }} />
-
-        {/* Aurora lines */}
-        {[25, 55, 75].map((top, i) => (
-          <div key={i} className="absolute left-0 right-0 h-px" style={{
-            top: `${top}%`,
-            background: `linear-gradient(to right, transparent 0%, rgba(117,199,255,${0.04 + i * 0.03}) 30%, rgba(117,199,255,${0.08 + i * 0.03}) 50%, rgba(117,199,255,${0.04 + i * 0.03}) 70%, transparent 100%)`,
-          }} />
-        ))}
-
-        {/* Frost particles */}
-        {particles.map(p => (
-          <motion.div key={p.id} className="absolute rounded-full"
-            style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, background: 'rgba(117,199,255,0.4)' }}
-            animate={{ y: [0, -40, 0], opacity: [0, 0.7, 0] }}
-            transition={{ duration: p.dur, delay: p.delay, repeat: Infinity, ease: 'easeInOut' }}
+    <MotionConfig reducedMotion="user">
+    <section className="relative overflow-hidden pt-16 min-h-[92svh] flex items-center">
+      {/* Background */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-10%,rgba(116,172,223,0.22),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_40%_at_85%_35%,rgba(246,180,14,0.10),transparent_70%)]" />
+        {/* Flag bands sweeping across the sky */}
+        <div className="absolute -left-1/4 top-[18%] w-[150%] h-40 -rotate-6 opacity-[0.07] flex flex-col">
+          <span className="flex-1 bg-[#74ACDF]" /><span className="flex-1 bg-white" /><span className="flex-1 bg-[#74ACDF]" />
+        </div>
+        <SolDeMayo className="absolute right-[-12rem] top-[6rem] w-[34rem] h-[34rem] opacity-[0.10] sun-spin hidden sm:block" />
+        <SolDeMayo className="absolute left-1/2 -translate-x-1/2 top-24 w-72 h-72 opacity-[0.07] sm:hidden" />
+        {FLAKES.map((f, i) => (
+          <span
+            key={i}
+            className={`hero-flake absolute rounded-full bg-[#cfe6f8] motion-reduce:hidden ${i >= 10 ? 'hidden sm:block' : ''}`}
+            style={{ left: `${f.x}%`, top: `${f.y}%`, width: f.s, height: f.s, animationDuration: `${f.t}s`, animationDelay: `${f.d}s` }}
           />
         ))}
-
-        {/* Bottom divider */}
-        <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(117,199,255,0.25), transparent)' }} />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#050A14]" />
       </div>
 
-      {/* ── Content ─────────────────────────────────────────────────── */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-24 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-16 items-center">
-
-        {/* Left */}
+      <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20 grid gap-10 lg:grid-cols-[1fr_400px] items-center">
         <div className="text-center lg:text-left">
-
-          {/* Badge */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-sm mb-7 font-medium"
-            style={{ background: 'rgba(117,199,255,0.07)', border: '1px solid rgba(117,199,255,0.2)', color: '#75C7FF' }}>
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-70" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-400" />
+          <motion.div {...fade(0)} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium mb-6 border border-[#74ACDF]/30 bg-[#101F35]/70 text-[#cfe6f8]">
+            <span className="flex flex-col w-5 h-3 rounded-[2px] overflow-hidden shrink-0" aria-hidden="true">
+              <span className="flex-1 bg-[#74ACDF]" /><span className="flex-1 bg-white" /><span className="flex-1 bg-[#74ACDF]" />
             </span>
-            Servidor Online
-            <span style={{ color: 'rgba(117,199,255,0.3)' }}>•</span>
-            <span style={{ color: 'rgba(117,199,255,0.6)' }}>WotLK 3.3.5a</span>
+            Servidor argentino · WotLK 3.3.5a
           </motion.div>
 
-          {/* Title */}
-          <motion.h1 initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-            className="font-['Cinzel'] font-black leading-[0.9] mb-5"
-            style={{ fontSize: 'clamp(3.8rem, 9vw, 7rem)' }}>
+          <motion.h1 {...fade(0.08)} className="font-['Cinzel'] font-black leading-[0.95] mb-4 text-[clamp(2.35rem,11.5vw,6.5rem)]">
             <span className="block text-white">DOMINÁ</span>
-            <span className="block" style={{
-              background: 'linear-gradient(135deg, #75C7FF 0%, #FFFFFF 45%, #75C7FF 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              filter: 'drop-shadow(0 0 50px rgba(117,199,255,0.6))',
-            }}>RASGANORTE</span>
+            <span className="block bg-gradient-to-r from-[#74ACDF] via-white to-[#74ACDF] bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(116,172,223,0.45)]">
+              RASGANORTE
+            </span>
           </motion.h1>
 
-          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-            className="font-['Cinzel'] text-xl mb-4 tracking-[0.35em] uppercase"
-            style={{ color: 'rgba(117,199,255,0.65)' }}>
-            A Tu Manera
+          <motion.p {...fade(0.16)} className="font-['Cinzel'] text-sm sm:text-lg tracking-[0.3em] uppercase text-[#F6B40E] mb-5">
+            Con alma argentina
           </motion.p>
 
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-slate-400 text-lg max-w-lg mx-auto lg:mx-0 mb-9 leading-relaxed">
-            Tres caminos únicos, sets custom argentinos, PvP competitivo y una comunidad que te espera.
-            El servidor WoW WotLK más épico de Argentina.
+          <motion.p {...fade(0.22)} className="text-slate-300 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 mb-8">
+            Tres caminos de progreso, sets custom con identidad propia, PvP competitivo y una comunidad que habla tu idioma.
+            Creá tu cuenta gratis y empezá hoy.
           </motion.p>
 
-          {/* CTAs */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex flex-wrap gap-3 justify-center lg:justify-start mb-11">
-            <Link href="/register">
-              <motion.button whileHover={{ scale: 1.04, boxShadow: '0 0 50px rgba(37,99,235,0.5)' }} whileTap={{ scale: 0.96 }}
-                className="flex items-center gap-2.5 px-8 py-3.5 rounded-xl font-['Cinzel'] font-bold text-base text-white transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)',
-                  border: '1px solid rgba(117,199,255,0.4)',
-                  boxShadow: '0 4px 24px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-                }}>
-                <Sword className="w-5 h-5" />
-                JUGAR AHORA
-              </motion.button>
+          <motion.div {...fade(0.3)} className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center lg:justify-start mb-8">
+            <Link href="/register" className="btn-gold px-7 py-3.5 text-base">
+              <UserPlus className="w-5 h-5" /> Crear cuenta gratis
             </Link>
-            <Link href="/download">
-              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                className="flex items-center gap-2.5 px-8 py-3.5 rounded-xl font-['Cinzel'] font-bold text-base transition-all"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.14)',
-                  color: 'rgba(255,255,255,0.8)',
-                }}>
-                <Download className="w-5 h-5" />
-                DESCARGAR
-              </motion.button>
+            <Link href="/download" className="btn-ghost px-6 py-3.5 text-base">
+              <Download className="w-5 h-5" /> Descargar cliente
             </Link>
+            <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold text-white bg-[#5865F2] hover:bg-[#4752c4] transition-colors">
+              <DiscordIcon className="w-5 h-5" /> Discord
+            </a>
           </motion.div>
 
-          {/* Stats row */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.55 }}
-            className="flex flex-wrap gap-7 justify-center lg:justify-start">
+          <motion.ol {...fade(0.38)} className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-xl mx-auto lg:mx-0 text-left" aria-label="Cómo empezar">
             {[
-              { Icon: Users, color: '#4ade80', bg: 'rgba(74,222,128,0.1)', bd: 'rgba(74,222,128,0.2)', val: online === null ? '…' : display.toString(), lbl: 'Online ahora' },
-              { Icon: Zap, color: '#75C7FF', bg: 'rgba(117,199,255,0.1)', bd: 'rgba(117,199,255,0.2)', val: '3', lbl: 'Caminos de juego' },
-              { Icon: Shield, color: '#FFD700', bg: 'rgba(255,215,0,0.1)', bd: 'rgba(255,215,0,0.2)', val: '3+', lbl: 'Sets exclusivos' },
-            ].map(s => (
-              <div key={s.lbl} className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center"
-                  style={{ background: s.bg, border: `1px solid ${s.bd}` }}>
-                  <s.Icon className="w-5 h-5" style={{ color: s.color }} />
-                </div>
-                <div>
-                  <div className="font-['Cinzel'] font-black text-xl text-white leading-none">{s.val}</div>
-                  <div className="text-xs text-slate-500 mt-0.5 uppercase tracking-wider">{s.lbl}</div>
-                </div>
-              </div>
+              ['1', 'Creá tu cuenta', '/register'],
+              ['2', 'Descargá el cliente', '/download'],
+              ['3', 'Configurá el realmlist', '/download'],
+              ['4', '¡Entrá a jugar!', '/download'],
+            ].map(([n, label, href]) => (
+              <li key={n}>
+                <Link href={href} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 hover:border-[#74ACDF]/40 transition-colors">
+                  <span className="w-6 h-6 shrink-0 rounded-full bg-[#74ACDF] text-[#050A14] text-xs font-black flex items-center justify-center">{n}</span>
+                  <span className="text-xs sm:text-[13px] text-slate-200 leading-tight">{label}</span>
+                </Link>
+              </li>
             ))}
-          </motion.div>
+          </motion.ol>
         </div>
 
-        {/* Right: server status panel */}
-        <motion.div initial={{ opacity: 0, x: 48, y: 8 }} animate={{ opacity: 1, x: 0, y: 0 }} transition={{ duration: 0.9, delay: 0.6 }}
-          className="hidden lg:block">
-          <div className="relative">
-            <div className="absolute -inset-4 rounded-3xl blur-2xl pointer-events-none"
-              style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(117,199,255,0.08) 0%, transparent 70%)' }} />
-            <div className="relative rounded-2xl overflow-hidden"
-              style={{ background: 'rgba(5,15,38,0.88)', border: '1px solid rgba(117,199,255,0.14)', backdropFilter: 'blur(24px)' }}>
-
-              {/* Panel titlebar */}
-              <div className="px-5 py-3 flex items-center gap-3 border-b"
-                style={{ borderColor: 'rgba(117,199,255,0.08)', background: 'rgba(117,199,255,0.03)' }}>
-                <div className="flex gap-1.5">
-                  {['bg-red-500/60','bg-yellow-500/60','bg-green-500/60'].map((c,i) => (
-                    <div key={i} className={`w-2.5 h-2.5 rounded-full ${c}`} />
-                  ))}
+        {/* Realm card */}
+        <motion.aside {...fade(0.45)} className="relative mx-auto w-full max-w-md lg:max-w-none" aria-label="Estado del reino">
+          <div className="absolute -inset-3 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(116,172,223,0.18),transparent_70%)] blur-xl" aria-hidden="true" />
+          <div className="relative rounded-2xl border border-[#74ACDF]/25 bg-[#0A1628]/85 backdrop-blur-md overflow-hidden">
+            <div className="flex h-1.5" aria-hidden="true"><span className="flex-1 bg-[#74ACDF]" /><span className="flex-1 bg-white" /><span className="flex-1 bg-[#74ACDF]" /></div>
+            <div className="p-5 sm:p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="relative w-12 h-12 shrink-0">
+                  <SolDeMayo className="absolute inset-0 w-full h-full" />
                 </div>
-                <span className="text-xs font-mono" style={{ color: 'rgba(117,199,255,0.5)' }}>realm.wowargentina</span>
-              </div>
-
-              {/* Status rows */}
-              <div className="p-5 space-y-2.5 font-mono text-sm">
-                {[
-                  { k: 'authserver', v: 'ONLINE', dot: true, vc: '#4ade80' },
-                  { k: 'worldserver', v: 'ONLINE', dot: true, vc: '#4ade80' },
-                  { k: 'versión', v: 'WotLK 3.3.5a', dot: false, vc: '#75C7FF' },
-                  { k: 'core', v: 'AzerothCore 2026', dot: false, vc: '#75C7FF' },
-                  { k: 'expansión', v: 'Wrath of the Lich King', dot: false, vc: '#a78bfa' },
-                ].map(r => (
-                  <div key={r.k} className="flex items-center justify-between gap-4">
-                    <span style={{ color: '#3d5577' }}>{r.k}</span>
-                    <span className="flex items-center gap-1.5" style={{ color: r.vc }}>
-                      {r.dot && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-                      {r.v}
-                    </span>
-                  </div>
-                ))}
-
-                {/* Realmlist box */}
-                <div className="pt-3 mt-1 border-t" style={{ borderColor: 'rgba(117,199,255,0.08)' }}>
-                  <div className="text-xs mb-1.5" style={{ color: '#3d5577' }}>realmlist</div>
-                  <div className="px-3 py-2 rounded-lg text-xs font-mono break-all"
-                    style={{ background: 'rgba(117,199,255,0.06)', color: '#75C7FF', border: '1px solid rgba(117,199,255,0.12)' }}>
-                    {process.env.NEXT_PUBLIC_REALMLIST || 'logon.wowargentina.com.ar'}
-                  </div>
-                </div>
-
-                {/* Live counter */}
-                <div className="pt-3 border-t text-center" style={{ borderColor: 'rgba(117,199,255,0.08)' }}>
-                  <div className="font-['Cinzel'] font-black text-4xl" style={{ color: '#75C7FF', filter: 'drop-shadow(0 0 16px rgba(117,199,255,0.4))' }}>
-                    {online === null ? '—' : display}
-                  </div>
-                  <div className="text-xs mt-1 tracking-widest uppercase" style={{ color: '#3d5577' }}>
-                    aventureros online
-                  </div>
+                <div>
+                  <div className="font-['Cinzel'] font-bold text-white text-lg">{SITE.realmName}</div>
+                  <div className="text-xs text-slate-400">Wrath of the Lich King · AzerothCore</div>
                 </div>
               </div>
+
+              <div className="rounded-xl bg-[#101F35] border border-white/5 p-4 text-center mb-4">
+                <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-400 mb-1">
+                  <Users className="w-3.5 h-3.5" /> Aventureros online
+                </div>
+                <div className="font-['Cinzel'] font-black text-4xl text-[#74ACDF]" aria-live="polite">{online === null ? '—' : display}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
+                <div className="rounded-lg bg-white/[0.03] border border-white/5 px-3 py-2.5 flex items-center gap-2 text-slate-300"><Swords className="w-4 h-4 text-[#F6B40E]" /> PvP y arenas</div>
+                <div className="rounded-lg bg-white/[0.03] border border-white/5 px-3 py-2.5 flex items-center gap-2 text-slate-300"><Snowflake className="w-4 h-4 text-[#75C7FF]" /> Rasganorte 80</div>
+              </div>
+
+              <div className="text-xs text-slate-400 mb-1.5">Realmlist</div>
+              <button
+                onClick={copyRealmlist}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-[#74ACDF]/25 bg-[#74ACDF]/5 text-left hover:bg-[#74ACDF]/10 transition-colors"
+                aria-label="Copiar realmlist"
+              >
+                <code className="text-xs sm:text-sm text-[#cfe6f8] break-all">set realmlist {SITE.realmlist}</code>
+                {copied ? <Check className="w-4 h-4 text-green-400 shrink-0" /> : <Copy className="w-4 h-4 text-slate-400 shrink-0" />}
+              </button>
             </div>
           </div>
-        </motion.div>
+        </motion.aside>
       </div>
-
-      {/* Scroll indicator */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-        <span className="text-xs tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.2)' }}>Explorar</span>
-        <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-          className="w-5 h-8 rounded-full border-2 flex items-start justify-center pt-1.5"
-          style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
-          <div className="w-1 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.25)' }} />
-        </motion.div>
-      </motion.div>
     </section>
+    </MotionConfig>
   )
 }

@@ -7,7 +7,7 @@ const benefits = [
   { Icon: Users, color: '#75C7FF', title: 'Comunidad Activa', desc: 'Miles de jugadores argentinos. Discord, eventos, raids, arenas organizadas.' },
   { Icon: Swords, color: '#FF6B4A', title: 'PvP Competitivo', desc: 'Arenas 2v2 y 3v3, battlegrounds, honor. Balance continuo de clases.' },
   { Icon: TrendingUp, color: '#4ade80', title: 'Progresión Híbrida', desc: 'Tres caminos únicos adaptados a tu estilo y tiempo disponible.' },
-  { Icon: Star, color: '#FFD700', title: 'Sets Exclusivos', desc: 'Equipamiento custom diseñado para Argentina. Tres tiers de poder.' },
+  { Icon: Star, color: '#F6B40E', title: 'Sets Exclusivos', desc: 'Equipamiento custom diseñado para Argentina. Tres tiers de poder.' },
   { Icon: Shield, color: '#a78bfa', title: 'Staff Activo', desc: 'Equipo de soporte real. Tickets respondidos, bugs corregidos rápido.' },
   { Icon: Scale, color: '#22d3ee', title: 'Balance Justo', desc: 'Clases ajustadas continuamente. Ninguna domina de forma absurda.' },
   { Icon: Zap, color: '#f97316', title: 'Eventos Únicos', desc: 'Eventos de temporada, torneos PvP, raids especiales y más.' },

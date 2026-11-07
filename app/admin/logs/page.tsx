@@ -29,7 +29,7 @@ export default function AdminLogsPage() {
         <div className="flex gap-1 bg-slate-900/60 border border-slate-700/50 rounded-xl p-1">
           {(['all', 'general', 'gm'] as const).map(t => (
             <button key={t} onClick={() => { setType(t); setPage(1) }}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${type === t ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${type === t ? 'bg-[#74ACDF] text-[#050A14] font-semibold' : 'text-slate-400 hover:text-white'}`}>
               {t === 'all' ? 'Todos' : t === 'general' ? 'General' : 'GM'}
             </button>
           ))}
@@ -38,9 +38,9 @@ export default function AdminLogsPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && setSearch(q)}
-              placeholder="Buscar en logs..." className="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-purple-500 text-sm" />
+              placeholder="Buscar en logs..." className="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-600 text-white rounded-xl outline-none focus:border-[#74ACDF] text-sm" />
           </div>
-          <button onClick={() => setSearch(q)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm transition-colors">Filtrar</button>
+          <button onClick={() => setSearch(q)} className="px-4 py-2 bg-[#74ACDF] hover:bg-[#8cc0ec] text-[#050A14] font-semibold rounded-xl text-sm transition-colors">Filtrar</button>
         </div>
       </div>
 

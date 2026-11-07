@@ -35,7 +35,7 @@ export default async function DirectivosPage() {
     { label: 'Cuentas Totales', value: stats.totalAccounts, icon: Users, color: '#3b82f6' },
     { label: 'Online Ahora', value: stats.onlineCount, icon: TrendingUp, color: '#22c55e' },
     { label: 'Baneos Activos', value: stats.activeBans, icon: Ban, color: '#ef4444' },
-    { label: 'Monedas en circulación', value: stats.totalCoins, icon: TrendingUp, color: '#FFD700' },
+    { label: 'Monedas en circulación', value: stats.totalCoins, icon: TrendingUp, color: '#F6B40E' },
     { label: 'Logs de Directivos', value: stats.directivosLogs, icon: Shield, color: '#a855f7' },
     { label: 'Tickets Abiertos', value: stats.openTickets, icon: AlertTriangle, color: '#f97316' },
   ]
@@ -43,7 +43,7 @@ export default async function DirectivosPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-['Cinzel'] font-black text-4xl mb-2" style={{ color: '#FFD700' }}>
+        <h1 className="font-['Cinzel'] font-black text-4xl mb-2" style={{ color: '#F6B40E' }}>
           Panel de Directivos
         </h1>
         <p className="text-sm" style={{ color: '#a89060' }}>Acceso total al servidor — Todas las acciones quedan registradas permanentemente</p>
@@ -54,7 +54,7 @@ export default async function DirectivosPage() {
           <div
             key={label}
             className="rounded-2xl p-5"
-            style={{ background: 'rgba(255, 215, 0, 0.03)', border: '1px solid rgba(255, 215, 0, 0.1)' }}
+            style={{ background: 'rgba(246, 180, 14, 0.03)', border: '1px solid rgba(246, 180, 14, 0.1)' }}
           >
             <div className="flex items-start justify-between mb-3">
               <Icon className="w-5 h-5" style={{ color }} />

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { queryCharactersFirst, queryCharacters } from '@/lib/db'
+import { queryCharactersFirst, queryCharacters, WORLD_DB } from '@/lib/db'
 
 export interface EquippedItem {
   slot: number
@@ -46,7 +46,7 @@ export async function GET(
     }>(
       `SELECT guid, name, race, class, level, gender,
               totalHonorPoints, arenaPoints, totalKills,
-              online, guildid, totaltime
+              online, COALESCE((SELECT gm.guildid FROM guild_member gm WHERE gm.guid = characters.guid), 0) AS guildid, totaltime
          FROM characters
         WHERE name = ? AND deleteinfos_account IS NULL`,
       [characterName],
@@ -94,8 +94,8 @@ export async function GET(
          COALESCE(it.stat_type8,  0) AS s8t, COALESCE(it.stat_value8,  0) AS s8v
        FROM character_inventory ci
        JOIN item_instance  ii ON ci.item       = ii.guid
-       JOIN item_template  it ON ii.itemEntry  = it.entry
-      WHERE ci.guid = ? AND ci.bag = 255 AND ci.slot BETWEEN 0 AND 18
+       JOIN ${WORLD_DB}.item_template it ON ii.itemEntry  = it.entry
+      WHERE ci.guid = ? AND ci.bag = 0 AND ci.slot BETWEEN 0 AND 18
       ORDER BY ci.slot`,
       [character.guid],
     )

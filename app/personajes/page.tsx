@@ -53,7 +53,8 @@ export default async function PersonajesPage({
       guid: number; name: string; level: number; class: number; race: number
       online: number; guildid: number
     }>(
-      `SELECT guid, name, level, class, race, online, guildid
+      `SELECT guid, name, level, class, race, online,
+              COALESCE((SELECT gm.guildid FROM guild_member gm WHERE gm.guid = characters.guid), 0) AS guildid
          FROM characters
         WHERE name LIKE ? AND deleteinfos_account IS NULL AND level > 0
         ORDER BY level DESC, name ASC
@@ -140,7 +141,7 @@ export default async function PersonajesPage({
           </div>
         ) : (
           <div className="bg-slate-900/60 border border-slate-700/50 rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="table-scroll"><table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-slate-700/50">
                   {['Nombre', 'Clase', 'Raza', 'Nivel', 'Guild', ''].map(h => (
@@ -203,7 +204,7 @@ export default async function PersonajesPage({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         )}
 

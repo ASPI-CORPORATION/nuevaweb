@@ -35,7 +35,7 @@ export default async function ChangelogPage() {
             <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#74ACDF]/10 border border-[#74ACDF]/25 flex items-center justify-center shrink-0">
               <GitBranch className="w-6 h-6 text-[#74ACDF]" />
             </div>
-            <h1 className="font-['Cinzel'] font-black text-3xl sm:text-5xl text-white">Actualizaciones</h1>
+            <h1 className="font-['Cinzel'] font-black text-[1.6rem] leading-tight min-[380px]:text-3xl sm:text-5xl text-white break-words min-w-0">Actualizaciones</h1>
           </div>
           <p className="text-slate-400 mt-3 max-w-2xl">Cada cambio que llega a Rasganorte: contenido nuevo, correcciones, balances y eventos.</p>
         </header>

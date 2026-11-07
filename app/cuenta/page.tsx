@@ -55,7 +55,7 @@ export default async function CuentaDashboard() {
       {/* Stats rápidas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Moneda Argentina', value: coins.toLocaleString('es-AR'), icon: Coins, color: '#FFD700' },
+          { label: 'Moneda Argentina', value: coins.toLocaleString('es-AR'), icon: Coins, color: '#F6B40E' },
           { label: 'Personajes', value: characters.length, icon: Users, color: '#75C7FF' },
           { label: 'Votos Totales', value: recentVotes.length + '+', icon: ThumbsUp, color: '#90EE90' },
           { label: 'Compras', value: recentOrders.length + '+', icon: ShoppingBag, color: '#F58CBA' },

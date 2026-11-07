@@ -22,7 +22,7 @@ const CLASS_NAMES: Record<number, string> = {
 }
 
 const RANK_STYLES = [
-  { bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.3)', text: '#FFD700' },
+  { bg: 'rgba(246, 180, 14,0.12)', border: 'rgba(246, 180, 14,0.3)', text: '#F6B40E' },
   { bg: 'rgba(192,192,192,0.08)', border: 'rgba(192,192,192,0.25)', text: '#C0C0C0' },
   { bg: 'rgba(205,127,50,0.08)', border: 'rgba(205,127,50,0.25)', text: '#CD7F32' },
 ]
@@ -69,7 +69,7 @@ function PlayerTable({ players, valueKey, label }: { players: PvpPlayer[]; value
               <div className="text-xs text-slate-500">{CLASS_NAMES[p.class] ?? 'Desconocido'}{p.guild ? ` • ${p.guild}` : ''}</div>
             </div>
             <div className="text-right flex-shrink-0">
-              <div className="font-['Cinzel'] font-bold text-sm" style={{ color: '#FFD700' }}>
+              <div className="font-['Cinzel'] font-bold text-sm" style={{ color: '#F6B40E' }}>
                 {Number(p[valueKey]).toLocaleString('es-AR')}
               </div>
               <div className="text-xs text-slate-500">{label}</div>
@@ -93,11 +93,11 @@ export function TopPvPTabs({ honor, arena, level }: Props) {
   return (
     <div>
       {/* Tab buttons */}
-      <div className="flex gap-2 mb-6 p-1 rounded-xl w-fit"
+      <div className="flex gap-1 sm:gap-2 mb-6 p-1 rounded-xl w-full sm:w-fit"
         style={{ background: 'rgba(5,15,38,0.8)', border: '1px solid rgba(117,199,255,0.1)' }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setActive(t.id)}
-            className="relative flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium font-['Cinzel'] transition-all duration-200"
+            className="relative flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-medium font-['Cinzel'] transition-all duration-200"
             style={{ color: active === t.id ? '#fff' : '#4a5568' }}>
             {active === t.id && (
               <motion.div layoutId="tab-indicator"

@@ -88,19 +88,19 @@ export default function DownloadPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="flex gap-6 bg-slate-900/60 border border-slate-700/50 rounded-2xl p-6"
+                className="flex flex-col sm:flex-row gap-4 sm:gap-6 card-dark p-5 sm:p-6"
               >
                 <div className="flex-shrink-0">
                   <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
                     <Icon className="w-7 h-7 text-blue-400" />
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-blue-400/60 font-mono font-bold mb-1">PASO {step.number}</div>
+                <div className="min-w-0">
+                  <div className="text-xs text-[#74ACDF] font-mono font-bold mb-1">PASO {step.number}</div>
                   <h3 className="font-['Cinzel'] font-bold text-xl text-white mb-2">{step.title}</h3>
                   <p className="text-slate-400 leading-relaxed mb-4">{step.description}</p>
                   {step.code && (
-                    <div className="bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 font-mono text-green-400 text-sm mb-4">
+                    <div className="bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 font-mono text-green-400 text-sm mb-4 break-all">
                       {step.code}
                     </div>
                   )}

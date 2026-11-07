@@ -37,34 +37,34 @@ export default function DirectivosBAneosPage() {
 
   return (
     <div>
-      <h1 className="font-['Cinzel'] font-black text-3xl mb-6" style={{ color: '#FFD700' }}>Baneos</h1>
+      <h1 className="font-['Cinzel'] font-black text-3xl mb-6" style={{ color: '#F6B40E' }}>Baneos</h1>
 
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        <div className="rounded-2xl p-6" style={{ background: 'rgba(255,215,0,0.03)', border: '1px solid rgba(255,215,0,0.1)' }}>
+        <div className="rounded-2xl p-6" style={{ background: 'rgba(246, 180, 14,0.03)', border: '1px solid rgba(246, 180, 14,0.1)' }}>
           <h2 className="font-semibold text-white mb-4">Ejecutar acción</h2>
           {err && <div className="mb-3 px-3 py-2 bg-red-500/15 border border-red-500/30 text-red-400 rounded-xl text-sm">{err}</div>}
           {msg && <div className="mb-3 px-3 py-2 bg-green-500/15 border border-green-500/30 text-green-400 rounded-xl text-sm">{msg}</div>}
 
           <div className="space-y-3">
             <select value={form.action} onChange={e => setForm(f => ({ ...f, action: e.target.value as BanAction }))}
-              className="w-full px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm outline-none" style={{ border: '1px solid rgba(255,215,0,0.2)' }}>
+              className="w-full px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm outline-none" style={{ border: '1px solid rgba(246, 180, 14,0.2)' }}>
               <option value="ban_account">Banear cuenta</option>
               <option value="unban_account">Desbanear cuenta</option>
               <option value="ban_ip">Banear IP</option>
             </select>
             <input value={form.identifier} onChange={e => setForm(f => ({ ...f, identifier: e.target.value }))}
               placeholder={form.action === 'ban_ip' ? 'Dirección IP' : 'Nombre de cuenta'}
-              className="w-full px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm outline-none" style={{ border: '1px solid rgba(255,215,0,0.2)' }} />
+              className="w-full px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm outline-none" style={{ border: '1px solid rgba(246, 180, 14,0.2)' }} />
             {form.action !== 'unban_account' && (
               <input value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))}
                 placeholder="Duración en días (0 = permanente)"
-                className="w-full px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm outline-none" style={{ border: '1px solid rgba(255,215,0,0.2)' }} />
+                className="w-full px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm outline-none" style={{ border: '1px solid rgba(246, 180, 14,0.2)' }} />
             )}
             <textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-              placeholder="Motivo *" rows={3} className="w-full px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm outline-none resize-none" style={{ border: '1px solid rgba(255,215,0,0.2)' }} />
+              placeholder="Motivo *" rows={3} className="w-full px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm outline-none resize-none" style={{ border: '1px solid rgba(246, 180, 14,0.2)' }} />
             <button onClick={handleAction} disabled={saving}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm text-black"
-              style={{ background: 'linear-gradient(135deg, #FFD700, #B8860B)', opacity: saving ? 0.7 : 1 }}>
+              style={{ background: 'linear-gradient(135deg, #F6B40E, #B8860B)', opacity: saving ? 0.7 : 1 }}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
               Ejecutar
             </button>
@@ -72,13 +72,13 @@ export default function DirectivosBAneosPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,215,0,0.03)', border: '1px solid rgba(255,215,0,0.1)' }}>
-        <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,215,0,0.1)' }}>
+      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(246, 180, 14,0.03)', border: '1px solid rgba(246, 180, 14,0.1)' }}>
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(246, 180, 14,0.1)' }}>
           <h2 className="font-semibold text-white">Baneos activos</h2>
         </div>
-        <table className="w-full text-sm">
+        <div className="table-scroll"><table className="w-full min-w-[680px] text-sm">
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,215,0,0.08)' }}>
+            <tr style={{ borderBottom: '1px solid rgba(246, 180, 14,0.08)' }}>
               {['Usuario', 'Motivo', 'Baneado por', 'Fecha'].map(h => (
                 <th key={h} className="text-left px-5 py-3 font-medium" style={{ color: '#a89060' }}>{h}</th>
               ))}
@@ -86,7 +86,7 @@ export default function DirectivosBAneosPage() {
           </thead>
           <tbody>
             {bans.map((b: { id: number; username: string; banreason: string; bannedby: string; bandate: number }) => (
-              <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,215,0,0.05)' }}>
+              <tr key={b.id} style={{ borderBottom: '1px solid rgba(246, 180, 14,0.05)' }}>
                 <td className="px-5 py-3 font-medium text-white">{b.username}</td>
                 <td className="px-5 py-3 text-sm" style={{ color: '#a89060' }}>{b.banreason}</td>
                 <td className="px-5 py-3 text-sm" style={{ color: '#a89060' }}>{b.bannedby}</td>
@@ -97,7 +97,7 @@ export default function DirectivosBAneosPage() {
             ))}
             {bans.length === 0 && <tr><td colSpan={4} className="text-center py-6 text-slate-500">No hay baneos activos</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   )

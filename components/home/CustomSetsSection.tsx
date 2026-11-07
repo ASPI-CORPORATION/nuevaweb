@@ -63,12 +63,12 @@ export function CustomSetsSection() {
         <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-4"
-            style={{ background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.2)', color: '#FFD700' }}>
+            style={{ background: 'rgba(246, 180, 14,0.08)', border: '1px solid rgba(246, 180, 14,0.2)', color: '#F6B40E' }}>
             <Star className="w-3.5 h-3.5" /> Exclusivo WoW Argentina
           </div>
           <h2 className="font-['Cinzel'] font-black text-4xl md:text-5xl text-white mb-4">
             Sets{' '}
-            <span style={{ background: 'linear-gradient(135deg, #FFD700, #FFF8E1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ background: 'linear-gradient(135deg, #F6B40E, #FFF8E1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               Custom Argentinos
             </span>
           </h2>
@@ -164,7 +164,7 @@ export function CustomSetsSection() {
       </div>
 
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-px"
-        style={{ background: 'linear-gradient(to right, transparent, rgba(255,215,0,0.1), transparent)' }} />
+        style={{ background: 'linear-gradient(to right, transparent, rgba(246, 180, 14,0.1), transparent)' }} />
     </section>
   )
 }

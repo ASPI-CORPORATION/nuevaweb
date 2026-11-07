@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { SolDeMayo } from '@/components/brand/SolDeMayo'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Shield } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { Suspense } from 'react'
 
 function LoginForm() {
@@ -49,15 +50,15 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-20">
+    <div className="min-h-screen flex items-center justify-center px-4 pt-24 pb-12 bg-[radial-gradient(ellipse_70%_45%_at_50%_0%,rgba(116,172,223,0.16),transparent_70%)]">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-4">
-            <Shield className="w-8 h-8 text-blue-400" />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <SolDeMayo className="w-16 h-16" />
           </div>
           <h1 className="font-['Cinzel'] font-black text-3xl text-white mb-1">Ingresar</h1>
           <p className="text-slate-400 text-sm">Accedé a tu cuenta de WoW Argentina</p>
@@ -120,7 +121,7 @@ function LoginForm() {
               disabled={loading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full py-3.5 bg-blue-500 hover:bg-blue-400 disabled:bg-blue-500/40 text-white font-['Cinzel'] font-semibold rounded-xl transition-colors shadow-lg shadow-blue-500/20"
+              className="btn-gold w-full py-3.5 text-base font-['Cinzel']"
             >
               {loading ? 'Ingresando...' : 'INGRESAR'}
             </motion.button>

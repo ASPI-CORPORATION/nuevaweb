@@ -38,7 +38,7 @@ function ShopItemCard({ item, onBuy, coins, buying }: {
       whileHover={{ y: -4 }}
       className={`bg-slate-900/60 border rounded-2xl overflow-hidden transition-all duration-300 ${
         canAfford && !outOfStock
-          ? 'border-slate-700/50 hover:border-yellow-500/40 hover:shadow-[0_0_20px_rgba(255,215,0,0.1)]'
+          ? 'border-slate-700/50 hover:border-yellow-500/40 hover:shadow-[0_0_20px_rgba(246, 180, 14,0.1)]'
           : 'border-slate-700/30 opacity-70'
       }`}
     >
@@ -201,7 +201,7 @@ export function ShopClient({ items, categories, session, initialCoins }: ShopCli
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
-              className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full"
+              className="bg-slate-900 border border-slate-700 rounded-2xl p-5 sm:p-6 max-w-md w-full max-h-[90svh] overflow-y-auto overscroll-contain"
               onClick={e => e.stopPropagation()}
             >
               <h3 className="font-['Cinzel'] font-bold text-xl text-white mb-4">Confirmar Compra</h3>

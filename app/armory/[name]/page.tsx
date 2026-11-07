@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { queryCharactersFirst, queryCharacters } from '@/lib/db'
+import { queryCharactersFirst, queryCharacters, WORLD_DB } from '@/lib/db'
 import { ArrowLeft, Users } from 'lucide-react'
 import Link from 'next/link'
 import ArmoryPaperdoll, { type EquippedItem } from '@/components/armory/ArmoryPaperdoll'
@@ -37,8 +37,8 @@ async function getArmoryData(characterName: string) {
     online: number; guildid: number; totaltime: number
   }>(
     `SELECT guid, name, race, class, level, gender,
-            totalHonorPoints, arenaPoints, totalKills, today_kills,
-            online, guildid, totaltime
+            totalHonorPoints, arenaPoints, totalKills, todayKills AS today_kills,
+            online, COALESCE((SELECT gm.guildid FROM guild_member gm WHERE gm.guid = characters.guid), 0) AS guildid, totaltime
        FROM characters
       WHERE name = ? AND deleteinfos_account IS NULL`,
     [characterName],
@@ -83,8 +83,8 @@ async function getArmoryData(characterName: string) {
          COALESCE(it.stat_type8, 0) AS s8t, COALESCE(it.stat_value8, 0) AS s8v
        FROM character_inventory ci
        JOIN item_instance  ii ON ci.item       = ii.guid
-       JOIN item_template  it ON ii.itemEntry  = it.entry
-      WHERE ci.guid = ? AND ci.bag = 255 AND ci.slot BETWEEN 0 AND 18
+       JOIN ${WORLD_DB}.item_template it ON ii.itemEntry  = it.entry
+      WHERE ci.guid = ? AND ci.bag = 0 AND ci.slot BETWEEN 0 AND 18
       ORDER BY ci.slot`,
       [character.guid],
     ),
@@ -134,8 +134,8 @@ export default async function ArmoryPage({
 
   try {
     data = await getArmoryData(characterName)
-  } catch {
-    // DB unavailable — fall through to notFound
+  } catch (err) {
+    console.error('[armory] query failed:', err instanceof Error ? err.message : err)
   }
 
   if (!data) notFound()
@@ -218,7 +218,7 @@ export default async function ArmoryPage({
         {/* ── Stats grid ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'Honor Total',   value: character.totalHonorPoints, color: '#FFD700' },
+            { label: 'Honor Total',   value: character.totalHonorPoints, color: '#F6B40E' },
             { label: 'Puntos Arena',  value: character.arenaPoints,      color: '#75C7FF' },
             { label: 'Kills Totales', value: character.totalKills,       color: '#FF6B6B' },
             { label: 'Kills de Hoy',  value: character.today_kills,      color: '#90EE90' },

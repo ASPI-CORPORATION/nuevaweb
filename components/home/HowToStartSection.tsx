@@ -24,7 +24,7 @@ const steps = [
   {
     num: '03',
     Icon: UserPlus,
-    color: '#FFD700',
+    color: '#F6B40E',
     title: 'Creá tu Cuenta',
     desc: 'Registrate gratis en nuestra web. Con un usuario y contraseña ya podés entrar al juego.',
     cta: { label: 'Crear Cuenta', href: '/register' },
