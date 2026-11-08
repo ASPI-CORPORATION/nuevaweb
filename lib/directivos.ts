@@ -1,4 +1,4 @@
-import { queryCms } from '@/lib/db'
+import { queryCms, queryAuthFirst } from '@/lib/db'
 import { requireRole, getSessionFromRequest, type AuthorizedUser } from '@/lib/auth'
 import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 import { isOwner } from '@/lib/roles'
@@ -42,6 +42,31 @@ export async function logUnauthorizedAttempt(accountId: number | null, username:
   } catch {}
 }
 
+interface ColumnInfo { Field: string; Type: string; Null: 'YES' | 'NO'; Default: string | null; Extra: string }
+
+let logColumns: ColumnInfo[] | null = null
+
+/** Production databases may have extra columns (e.g. directivo_name NOT NULL) not in database/cms.sql. */
+async function getLogColumns(): Promise<ColumnInfo[]> {
+  if (!logColumns) logColumns = await queryCms<ColumnInfo>('SHOW COLUMNS FROM cms_directivos_logs')
+  return logColumns
+}
+
+async function usernameOf(accountId: number | null): Promise<string> {
+  if (!accountId) return ''
+  const row = await queryAuthFirst<{ username: string }>('SELECT username FROM account WHERE id = ?', [accountId]).catch(() => null)
+  return row?.username ?? `#${accountId}`
+}
+
+function neutralValue(type: string): unknown {
+  const t = type.toLowerCase()
+  if (/int|decimal|float|double|bit|bool/.test(t)) return 0
+  if (/datetime|timestamp/.test(t)) return new Date()
+  if (t.startsWith('date')) return new Date().toISOString().slice(0, 10)
+  if (t.startsWith('enum(')) return t.match(/^enum\('((?:[^']|'')*)'/)?.[1]?.replace(/''/g, "'") ?? ''
+  return ''
+}
+
 export async function logDirectivoAction(
   directivoId: number,
   targetAccountId: number | null,
@@ -49,8 +74,24 @@ export async function logDirectivoAction(
   details: string,
   ip: string
 ) {
+  const values: Record<string, unknown> = {
+    directivo_account_id: directivoId,
+    target_account_id: targetAccountId,
+    action,
+    details,
+    ip,
+  }
+  const cols = await getLogColumns()
+  const names = new Set(cols.map(c => c.Field))
+  if (names.has('directivo_name')) values.directivo_name = await usernameOf(directivoId)
+  if (names.has('target_name')) values.target_name = await usernameOf(targetAccountId)
+  for (const c of cols) {
+    const required = c.Null === 'NO' && c.Default === null && !/auto_increment|DEFAULT_GENERATED/i.test(c.Extra)
+    if (required && !(c.Field in values)) values[c.Field] = neutralValue(c.Type)
+  }
+  const fields = Object.keys(values).filter(f => names.has(f))
   await queryCms(
-    'INSERT INTO cms_directivos_logs (directivo_account_id, target_account_id, action, details, ip) VALUES (?, ?, ?, ?, ?)',
-    [directivoId, targetAccountId, action, details, ip]
+    `INSERT INTO cms_directivos_logs (${fields.map(f => `\`${f}\``).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`,
+    fields.map(f => values[f])
   )
 }

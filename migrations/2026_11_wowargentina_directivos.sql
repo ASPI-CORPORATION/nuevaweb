@@ -49,12 +49,44 @@ UPDATE wowargentina_cms.wowargentina_directivos
 SET nombre_directivo = 'Máxima Autoridad'
 WHERE account_id = 1 AND HEX(nombre_directivo) = '4DC383C2A178696D61204175746F7269646164';
 
--- Registro de auditoría de la migración (si la tabla de logs existe)
-INSERT INTO wowargentina_cms.cms_directivos_logs (directivo_account_id, target_account_id, action, details, ip)
-SELECT 1, 1, 'DIRECTIVO_BOOTSTRAP', 'Migración: cuenta ID 1 registrada como Propietario (Máxima Autoridad)', 'migracion'
-FROM acore_auth.account a
-WHERE a.id = 1
-  AND NOT EXISTS (SELECT 1 FROM wowargentina_cms.cms_directivos_logs WHERE action = 'DIRECTIVO_BOOTSTRAP');
+-- Registro de auditoría de la migración. Se adapta a columnas extra que existan en tu
+-- cms_directivos_logs (directivo_name / target_name) y nunca detiene la migración.
+DROP PROCEDURE IF EXISTS wowargentina_cms.wa_log_bootstrap;
+DELIMITER //
+CREATE PROCEDURE wowargentina_cms.wa_log_bootstrap()
+BEGIN
+  DECLARE v_user VARCHAR(64) DEFAULT NULL;
+  DECLARE v_cols TEXT DEFAULT 'directivo_account_id, target_account_id, action, details, ip';
+  DECLARE v_vals TEXT DEFAULT NULL;
+  DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+    SELECT 'Aviso: no se pudo escribir el log de auditoría (el Propietario sí quedó registrado)' AS aviso;
+
+  SELECT username INTO v_user FROM acore_auth.account WHERE id = 1;
+
+  IF v_user IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM wowargentina_cms.cms_directivos_logs WHERE action = 'DIRECTIVO_BOOTSTRAP'
+  ) THEN
+    SET v_vals = CONCAT_WS(', ', '1', '1', QUOTE('DIRECTIVO_BOOTSTRAP'),
+      QUOTE('Migración: cuenta ID 1 registrada como Propietario (Máxima Autoridad)'), QUOTE('migracion'));
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'wowargentina_cms'
+               AND table_name = 'cms_directivos_logs' AND column_name = 'directivo_name') THEN
+      SET v_cols = CONCAT(v_cols, ', directivo_name');
+      SET v_vals = CONCAT(v_vals, ', ', QUOTE(v_user));
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'wowargentina_cms'
+               AND table_name = 'cms_directivos_logs' AND column_name = 'target_name') THEN
+      SET v_cols = CONCAT(v_cols, ', target_name');
+      SET v_vals = CONCAT(v_vals, ', ', QUOTE(v_user));
+    END IF;
+    SET @wa_sql = CONCAT('INSERT INTO wowargentina_cms.cms_directivos_logs (', v_cols, ') VALUES (', v_vals, ')');
+    PREPARE wa_stmt FROM @wa_sql;
+    EXECUTE wa_stmt;
+    DEALLOCATE PREPARE wa_stmt;
+  END IF;
+END //
+DELIMITER ;
+CALL wowargentina_cms.wa_log_bootstrap();
+DROP PROCEDURE IF EXISTS wowargentina_cms.wa_log_bootstrap;
 
 -- Verificación: debe mostrar la cuenta 1 como propietario activo.
 -- Si no devuelve filas, la cuenta ID 1 no existe en acore_auth.account.
