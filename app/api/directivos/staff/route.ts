@@ -3,12 +3,13 @@ import { z } from 'zod'
 import { requireDirectivo, logDirectivoAction } from '@/lib/directivos'
 import { queryAuth, queryAuthFirst, executeAuth } from '@/lib/db'
 import { getAccountAccess } from '@/lib/auth'
-import { getRankLevel } from '@/lib/rbac'
+import { isOwner } from '@/lib/roles'
 import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 const setGmSchema = z.object({
   accountId: z.number().int().positive(),
-  gmlevel: z.number().int().min(0).max(10),
+  // Native AzerothCore levels only; web Directivo access is managed in wowargentina_directivos
+  gmlevel: z.number().int().min(0).max(3),
   reason: z.string().min(1).max(200),
 })
 
@@ -105,17 +106,14 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Directivo membership comes from wowargentina_directivos: only the Propietario may touch
+  // another Directivo's in-game level, and nobody may touch the Propietario's.
   const targetAccess = await getAccountAccess(accountId)
-  if (targetAccess.role === 'directivo') {
-    // Unranked Directivos (legacy gmlevel 10 / env) count as top level
-    const callerLevel = directivo.access.rbacRankId ? getRankLevel(directivo.access.rbacRankId) : 9
-    const targetLevel = targetAccess.rbacRankId ? getRankLevel(targetAccess.rbacRankId) : 9
-    if (targetLevel >= callerLevel) {
-      return NextResponse.json(
-        { error: 'No podés modificar a un Directivo de igual o mayor jerarquía.' },
-        { status: 403 }
-      )
-    }
+  if (targetAccess.directivo?.rank === 'propietario') {
+    return NextResponse.json({ error: 'El nivel del Propietario no puede modificarse desde el panel.' }, { status: 403 })
+  }
+  if (targetAccess.directivo && !isOwner(directivo.access)) {
+    return NextResponse.json({ error: 'Solo el Propietario puede modificar a otros Directivos.' }, { status: 403 })
   }
 
   if (gmlevel === 0) {

@@ -17,6 +17,7 @@ import { requireDirectivo, logDirectivoAction } from '@/lib/directivos'
 import { queryAuth, queryAuthFirst, queryCms, withAuthTransaction } from '@/lib/db'
 import { RBAC_MIN, RBAC_MAX, getRank, canAssignRank } from '@/lib/rbac'
 import { getAccountRbacRank, countOwners } from '@/lib/rbac.server'
+import { isOwner } from '@/lib/roles'
 import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
@@ -128,7 +129,10 @@ export async function POST(req: NextRequest) {
   if (!target) return NextResponse.json({ error: 'Cuenta no encontrada' }, { status: 404 })
 
   // ── Caller's own RBAC rank (re-read from DB, never trust the JWT) ───────────
-  const callerRankId   = await getAccountRbacRank(directivo.id)
+  // Propietario without an RBAC rank keeps full authority (bootstrap); a common Directivo
+  // without a rank is capped at Administrador level so they cannot grant Co-Owner/Owner.
+  const ownRank = await getAccountRbacRank(directivo.id)
+  const callerRankId = ownRank ?? (isOwner(directivo.access) ? null : 90007)
   const targetRankId   = await getAccountRbacRank(accountId)
 
   // ── Hierarchy check ─────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
         gmlevel: access.gmlevel,
         role: access.role,
         rbacRankId: access.rbacRankId,
+        directivoRank: access.directivo?.rank ?? null,
       },
     },
     { headers: { 'Cache-Control': 'no-store' } }

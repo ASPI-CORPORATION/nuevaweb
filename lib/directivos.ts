@@ -1,11 +1,12 @@
 import { queryCms } from '@/lib/db'
 import { requireRole, getSessionFromRequest, type AuthorizedUser } from '@/lib/auth'
 import { getClientIP, normalizeIP } from '@/lib/ip-utils'
+import { isOwner } from '@/lib/roles'
 import type { NextRequest } from 'next/server'
 
 /**
- * DB-verified Directivo check for API routes (gmlevel 10 legacy, RBAC Owner/Co-Owner,
- * or DIRECTIVOS_ACCOUNT_IDS). Denied attempts are written to cms_logs.
+ * DB-verified Directivo check for API routes: the account must have an active row in
+ * wowargentina_cms.wowargentina_directivos. Denied attempts are written to cms_logs.
  */
 export async function requireDirectivo(req: NextRequest): Promise<AuthorizedUser | Response> {
   const result = await requireRole(req, 'directivo')
@@ -13,6 +14,21 @@ export async function requireDirectivo(req: NextRequest): Promise<AuthorizedUser
     const session = getSessionFromRequest(req)
     const { normalizedIp } = normalizeIP(getClientIP(req.headers))
     await logUnauthorizedAttempt(session?.id ?? null, session?.username ?? 'anónimo', req.nextUrl.pathname, normalizedIp)
+  }
+  return result
+}
+
+/** Propietario-only operations (managing the Directivos team). */
+export async function requireOwner(req: NextRequest): Promise<AuthorizedUser | Response> {
+  const result = await requireDirectivo(req)
+  if (result instanceof Response) return result
+  if (!isOwner(result.access)) {
+    const { normalizedIp } = normalizeIP(getClientIP(req.headers))
+    await logUnauthorizedAttempt(result.id, result.username, `${req.nextUrl.pathname} (solo Propietario)`, normalizedIp)
+    return new Response(JSON.stringify({ error: 'Solo el Propietario puede gestionar el equipo de Directivos.' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
   return result
 }

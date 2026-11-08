@@ -1,11 +1,12 @@
 import { Crown } from 'lucide-react'
 import DirectivosSidebar from '@/components/directivos/DirectivosSidebar'
 import { requirePageRole } from '@/lib/page-guard'
-import { getRank } from '@/lib/rbac'
+import { DIRECTIVO_RANK_LABEL } from '@/lib/roles'
 
 export default async function DirectivosLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePageRole('directivo', '/directivos')
-  const rankName = user.access.rbacRankId ? getRank(user.access.rbacRankId)?.name ?? null : null
+  const membership = user.access.directivo
+  const rankName = membership ? `${DIRECTIVO_RANK_LABEL[membership.rank]} · ${membership.name}` : null
 
   return (
     <div className="min-h-screen pt-16 bg-[radial-gradient(ellipse_at_top,rgba(246,180,14,0.07),transparent_60%)]">

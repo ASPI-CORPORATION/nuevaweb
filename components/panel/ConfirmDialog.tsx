@@ -10,12 +10,14 @@ interface Props {
   message: React.ReactNode
   confirmLabel?: string
   danger?: boolean
+  /** Gold warning look (e.g. revoking access) instead of the red danger icon */
+  warning?: boolean
   busy?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
 
-export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirmar', danger, busy, onConfirm, onCancel }: Props) {
+export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirmar', danger, warning, busy, onConfirm, onCancel }: Props) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onCancel() }
@@ -32,10 +34,10 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirmar'
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
-            className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0A1628] p-6 shadow-2xl"
+            className={`relative w-full max-w-md rounded-2xl border bg-[#0A1628] p-6 shadow-2xl ${warning ? 'border-[#F6B40E]/30' : danger ? 'border-red-500/25' : 'border-white/10'}`}
           >
             <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${danger ? 'bg-red-500/10 text-red-400' : 'bg-[#74ACDF]/10 text-[#74ACDF]'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${warning ? 'bg-[#F6B40E]/12 text-[#F6B40E]' : danger ? 'bg-red-500/10 text-red-400' : 'bg-[#74ACDF]/10 text-[#74ACDF]'}`}>
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="min-w-0">

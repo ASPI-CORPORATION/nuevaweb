@@ -1,12 +1,12 @@
 /**
  * Web roles for WoW Argentina — pure, client-safe module (no DB access).
  *
- * The effective role is resolved from three independent sources and the
- * highest one wins:
- *   1. acore_auth.account_access.gmlevel (native AzerothCore 0-3, legacy 10 = Directivo)
- *   2. Custom RBAC rank 90000-90009 in rbac_account_permissions — only counted when
- *      the permission is registered in rbac_permissions (verified server-side)
- *   3. DIRECTIVOS_ACCOUNT_IDS env var (server-only break-glass, no DB change needed)
+ * - GM / Admin come from the game's own permissions (highest wins):
+ *     acore_auth.account_access.gmlevel (native 0-3) and the custom RBAC ranks
+ *     90000-90009 (only when registered in rbac_permissions, verified server-side).
+ * - Directivo comes ONLY from wowargentina_cms.wowargentina_directivos (active row).
+ *   gmlevel and RBAC never grant access to /directivos, and being a Directivo never
+ *   grants anything inside the game: the two permission systems are independent.
  */
 
 export type WebRole = 'user' | 'gm' | 'admin' | 'directivo'
@@ -20,14 +20,27 @@ export const ROLE_LABEL: Record<WebRole, string> = {
   directivo: 'Directivo',
 }
 
-/** Legacy web convention kept for backwards compatibility with existing accounts. */
-export const LEGACY_DIRECTIVO_GMLEVEL = 10
+export type DirectivoRank = 'propietario' | 'directivo'
 
-export type AccessSource = 'gmlevel' | 'rbac' | 'env'
+export const DIRECTIVO_RANK_LABEL: Record<DirectivoRank, string> = {
+  propietario: 'Máxima Autoridad',
+  directivo: 'Directivo',
+}
+
+/** Account that the bootstrap migration registers as Propietario; never removable from the panel. */
+export const OWNER_ACCOUNT_ID = 1
+
+export type AccessSource = 'gmlevel' | 'rbac' | 'directivos'
+
+export interface DirectivoMembership {
+  rank: DirectivoRank
+  name: string
+}
 
 export interface AccessInfo {
   gmlevel: number
   rbacRankId: number | null
+  directivo: DirectivoMembership | null
   role: WebRole
   sources: AccessSource[]
 }
@@ -43,25 +56,27 @@ export function maxRole(a: WebRole, b: WebRole): WebRole {
 
 /** Native AzerothCore: 0 player, 1 moderator, 2 gamemaster, 3 administrator, 4 console. */
 export function roleFromGmLevel(gmlevel: number): WebRole {
-  if (gmlevel >= LEGACY_DIRECTIVO_GMLEVEL) return 'directivo'
   if (gmlevel >= 3) return 'admin'
   if (gmlevel >= 2) return 'gm'
   return 'user'
 }
 
 /**
- * Custom RBAC ranks → web role. Least privilege: only Owner / Co-Owner are Directivos,
- * only Administrador is Admin, Game Master..Developer get the GM panel.
+ * Custom RBAC ranks → web role (never Directivo). Least privilege:
+ * Administrador / Co-Owner / Owner → Admin, Game Master..Developer → GM.
  */
 export function roleFromRbacRank(rankId: number | null | undefined): WebRole {
   if (rankId == null) return 'user'
-  if (rankId >= 90008 && rankId <= 90009) return 'directivo'
-  if (rankId === 90007) return 'admin'
+  if (rankId >= 90007 && rankId <= 90009) return 'admin'
   if (rankId >= 90002 && rankId <= 90006) return 'gm'
   return 'user'
 }
 
-export function resolveRole(input: { gmlevel: number; rbacRankId: number | null; envDirectivo: boolean }): AccessInfo {
+export function resolveRole(input: {
+  gmlevel: number
+  rbacRankId: number | null
+  directivo: DirectivoMembership | null
+}): AccessInfo {
   const sources: AccessSource[] = []
   let role: WebRole = 'user'
 
@@ -71,24 +86,19 @@ export function resolveRole(input: { gmlevel: number; rbacRankId: number | null;
   const fromRbac = roleFromRbacRank(input.rbacRankId)
   if (fromRbac !== 'user') { role = maxRole(role, fromRbac); sources.push('rbac') }
 
-  if (input.envDirectivo) { role = 'directivo'; sources.push('env') }
+  if (input.directivo) { role = 'directivo'; sources.push('directivos') }
 
-  return { gmlevel: input.gmlevel, rbacRankId: input.rbacRankId, role, sources }
+  return { gmlevel: input.gmlevel, rbacRankId: input.rbacRankId, directivo: input.directivo, role, sources }
 }
 
 /** Maps the old numeric thresholds used across the codebase (2 / 3 / 10) to roles. */
 export function roleForMinGmLevel(minLevel: number): WebRole {
-  if (minLevel >= LEGACY_DIRECTIVO_GMLEVEL) return 'directivo'
+  if (minLevel >= 10) return 'directivo'
   if (minLevel >= 3) return 'admin'
   if (minLevel >= 2) return 'gm'
   return 'user'
 }
 
-export function parseAccountIdList(raw: string | undefined): Set<number> {
-  const ids = new Set<number>()
-  for (const part of (raw ?? '').split(',')) {
-    const n = Number(part.trim())
-    if (Number.isInteger(n) && n > 0) ids.add(n)
-  }
-  return ids
+export function isOwner(access: Pick<AccessInfo, 'directivo'> | null | undefined): boolean {
+  return access?.directivo?.rank === 'propietario'
 }

@@ -10,6 +10,7 @@ import type { WebRole } from '@/lib/roles'
 
 const links: PanelLink[] = [
   { href: '/directivos', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/directivos/equipo', label: 'Gestión de Directivos', icon: Crown },
   { href: '/directivos/staff', label: 'Staff y Rangos', icon: Users },
   { href: '/directivos/cuentas', label: 'Cuentas', icon: Shield },
   { href: '/directivos/baneos', label: 'Baneos', icon: Ban },

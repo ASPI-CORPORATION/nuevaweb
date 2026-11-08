@@ -29,6 +29,9 @@ function sqlIdentifier(name: string): string {
   return `\`${name}\``
 }
 
+/** Qualified auth DB name for cross-database joins from the CMS pool (e.g. account usernames). */
+export const AUTH_DB = sqlIdentifier(process.env.DATABASE_AUTH || 'acore_auth')
+
 /** Qualified world DB name for cross-database joins (e.g. item_template from the characters pool). */
 export const WORLD_DB = sqlIdentifier(process.env.DATABASE_WORLD || 'acore_world')
 

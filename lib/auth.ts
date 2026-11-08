@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
-import { queryAuthFirst } from './db'
+import { queryAuthFirst, queryCmsFirst } from './db'
 import {
   type AccessInfo, type WebRole,
-  hasRole, parseAccountIdList, resolveRole, roleForMinGmLevel,
+  type DirectivoMembership,
+  hasRole, resolveRole, roleForMinGmLevel,
 } from './roles'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
@@ -80,33 +81,67 @@ export async function getVerifiedRbacRank(accountId: number): Promise<number | n
   }
 }
 
+let directivosTableMissingLogged = false
+
+/**
+ * Active membership in wowargentina_cms.wowargentina_directivos — the ONLY source of
+ * access to /directivos. Returns null when the account is not an active member.
+ */
+export async function getDirectivoMembership(accountId: number): Promise<DirectivoMembership | null> {
+  try {
+    const row = await queryCmsFirst<{ rango: 'propietario' | 'directivo'; nombre_directivo: string }>(
+      `SELECT rango, nombre_directivo FROM wowargentina_directivos
+       WHERE account_id = ? AND activo = 1 AND fecha_baja IS NULL`,
+      [accountId]
+    )
+    return row ? { rank: row.rango, name: row.nombre_directivo } : null
+  } catch (err) {
+    if (!directivosTableMissingLogged) {
+      directivosTableMissingLogged = true
+      console.error(`[auth] wowargentina_directivos unavailable — run migrations/2026_11_wowargentina_directivos.sql: ${err instanceof Error ? err.message : err}`)
+    }
+    return null
+  }
+}
+
 export async function getAccountAccess(accountId: number): Promise<AccessInfo> {
-  const [gmlevel, rbacRankId] = await Promise.all([
+  const [gmlevel, rbacRankId, directivo] = await Promise.all([
     getFullGmLevel(accountId).catch(() => 0),
     getVerifiedRbacRank(accountId),
+    getDirectivoMembership(accountId),
   ])
-  const envDirectivo = parseAccountIdList(process.env.DIRECTIVOS_ACCOUNT_IDS).has(accountId)
-  return resolveRole({ gmlevel, rbacRankId, envDirectivo })
+  return resolveRole({ gmlevel, rbacRankId, directivo })
+}
+
+function jsonError(error: string, status: number) {
+  return new Response(JSON.stringify({ error }), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+/**
+ * CSRF defence in depth (the session cookie is already SameSite=Strict):
+ * state-changing requests that carry an Origin header must come from this site.
+ */
+export function checkSameOrigin(req: NextRequest): Response | null {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return null
+  const origin = req.headers.get('origin')
+  if (!origin) return null
+  const host = req.headers.get('x-forwarded-host')?.split(',')[0].trim() || req.headers.get('host')
+  try {
+    if (new URL(origin).host === host) return null
+  } catch {}
+  return jsonError('Origen no permitido', 403)
 }
 
 export type AuthorizedUser = SessionUser & { role: WebRole; access: AccessInfo }
 
 /** For API routes: DB-verified role check. Returns the user or a 401/403 Response. */
 export async function requireRole(req: NextRequest, min: WebRole): Promise<AuthorizedUser | Response> {
+  const csrf = checkSameOrigin(req)
+  if (csrf) return csrf
   const user = getSessionFromRequest(req)
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'No autenticado' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
+  if (!user) return jsonError('No autenticado', 401)
   const access = await getAccountAccess(user.id)
-  if (!hasRole(access.role, min)) {
-    return new Response(JSON.stringify({ error: 'Acceso denegado' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
+  if (!hasRole(access.role, min)) return jsonError('No tenés autorización para realizar esta acción.', 403)
   return { ...user, gmlevel: access.gmlevel, role: access.role, access }
 }
 
@@ -119,13 +154,10 @@ export async function getSessionWithAccess(): Promise<AuthorizedUser | null> {
 }
 
 export async function requireAuth(req: NextRequest): Promise<SessionUser | Response> {
+  const csrf = checkSameOrigin(req)
+  if (csrf) return csrf
   const user = getSessionFromRequest(req)
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'No autenticado' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
+  if (!user) return jsonError('No autenticado', 401)
   return user
 }
 
