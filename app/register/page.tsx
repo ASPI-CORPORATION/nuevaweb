@@ -1,14 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { SolDeMayo } from '@/components/brand/SolDeMayo'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Check } from 'lucide-react'
+import { notify } from '@/components/ui/toaster'
 
 export default function RegisterPage() {
-  const router = useRouter()
   const [form, setForm] = useState({
     username: '',
     password: '',
@@ -47,16 +46,20 @@ export default function RegisterPage() {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         setError(data.error || 'Error al crear la cuenta')
+        notify.error('No se pudo crear la cuenta', data.error || 'Ocurrió un problema. Intentá nuevamente.')
         return
       }
 
       setSuccess(true)
-      setTimeout(() => router.push('/cuenta'), 2000)
+      notify.success('¡Cuenta creada!', 'Bienvenido a WoW Argentina. Te llevamos a tu panel.')
+      // Full navigation so the new session cookie is sent with the request
+      setTimeout(() => { window.location.href = '/cuenta' }, 1800)
     } catch {
       setError('Error de red. Intentá de nuevo.')
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
     } finally {
       setLoading(false)
     }

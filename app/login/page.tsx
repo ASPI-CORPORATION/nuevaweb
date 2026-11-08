@@ -7,6 +7,7 @@ import { SolDeMayo } from '@/components/brand/SolDeMayo'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff } from 'lucide-react'
 import { Suspense } from 'react'
+import { notify } from '@/components/ui/toaster'
 
 function LoginForm() {
   const params = useSearchParams()
@@ -33,9 +34,10 @@ function LoginForm() {
         body: JSON.stringify(form),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         setError(data.error || 'Error al iniciar sesión')
+        notify.error('No pudimos iniciar sesión', data.error || 'Revisá tus datos e intentá nuevamente.')
         return
       }
 
@@ -44,6 +46,7 @@ function LoginForm() {
       window.location.href = redirect
     } catch {
       setError('Error de red. Intentá de nuevo.')
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
     } finally {
       setLoading(false)
     }

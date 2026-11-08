@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingCart, Coins, AlertCircle, Check } from 'lucide-react'
 import Link from 'next/link'
+import { notify } from '@/components/ui/toaster'
 
 interface ShopItem {
   id: number
@@ -134,15 +135,18 @@ export function ShopClient({ items, categories, session, initialCoins }: ShopCli
         body: JSON.stringify({ itemId: modal.item.id, characterName: charInput }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
+        notify.success('Compra realizada', `${modal.item.name} fue enviado por correo a ${charInput}.`)
         setCoins(c => c - modal.item.price_coins)
         setMessage({ type: 'success', text: `¡Comprado! Revisá tu correo en el juego con ${charInput}.` })
         setModal(null)
       } else {
+        notify.error('No se pudo completar la compra', data.error || 'Ocurrió un problema. Intentá nuevamente.')
         setMessage({ type: 'error', text: data.error || 'Error al comprar' })
       }
     } catch {
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
       setMessage({ type: 'error', text: 'Error de conexión' })
     } finally {
       setBuying(null)

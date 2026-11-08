@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { notify } from '@/components/ui/toaster'
+import { ConfirmDialog } from '@/components/panel/ConfirmDialog'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 type ShopCategory = 'Montura' | 'Mascota' | 'Cosmético' | 'Título' | 'Servicio' | 'Otro'
@@ -36,15 +38,28 @@ export default function AdminTiendaPage() {
     const payload = { item_entry: parseInt(form.item_entry), name: form.name, description: form.description, price_coins: parseInt(form.price_coins), category: form.category, image: form.image, active: form.active, stock: parseInt(form.stock) }
     const url = editId ? `/api/admin/shop/${editId}` : '/api/admin/shop'
     const res = await fetch(url, { method: editId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
     setSaving(false)
-    if (!res.ok) { setError(data.error); return }
+    if (!res.ok) {
+      setError(data.error)
+      notify.error('No se pudo guardar el item', data.error || 'Revisá los datos e intentá nuevamente.')
+      return
+    }
+    notify.success(editId ? 'Item actualizado' : 'Item creado', `${form.name} se guardó correctamente en la tienda.`)
     mutate(); setModal(false)
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('¿Eliminar este item de la tienda?')) return
-    await fetch(`/api/admin/shop/${id}`, { method: 'DELETE' })
+  const [toDelete, setToDelete] = useState<number | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const handleDelete = async () => {
+    if (toDelete === null) return
+    setDeleting(true)
+    const res = await fetch(`/api/admin/shop/${toDelete}`, { method: 'DELETE' }).catch(() => null)
+    const data = await res?.json().catch(() => ({}))
+    setDeleting(false)
+    if (!res?.ok) { notify.error('No se pudo eliminar el item', data?.error || 'Ocurrió un problema. Intentá nuevamente.'); return }
+    notify.success('Item eliminado', 'El item se quitó de la tienda.')
+    setToDelete(null)
     mutate()
   }
 
@@ -87,7 +102,7 @@ export default function AdminTiendaPage() {
                 <td className="px-5 py-3">
                   <div className="flex justify-end gap-1">
                     <button onClick={() => openEdit(item)} className="p-1.5 hover:bg-slate-700 rounded-lg"><Pencil className="w-4 h-4 text-blue-400" /></button>
-                    <button onClick={() => handleDelete(item.id)} className="p-1.5 hover:bg-slate-700 rounded-lg"><Trash2 className="w-4 h-4 text-red-400" /></button>
+                    <button onClick={() => setToDelete(item.id)} className="p-1.5 hover:bg-slate-700 rounded-lg"><Trash2 className="w-4 h-4 text-red-400" /></button>
                   </div>
                 </td>
               </tr>
@@ -129,6 +144,16 @@ export default function AdminTiendaPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Eliminar item"
+        message="¿Querés eliminar este item de la tienda? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        danger
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   )
 }

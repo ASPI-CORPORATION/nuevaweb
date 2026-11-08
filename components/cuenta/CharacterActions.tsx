@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, Heart, ChevronDown } from 'lucide-react'
+import { notify } from '@/components/ui/toaster'
 
 export function CharacterActions({ characterName, isOnline }: { characterName: string; isOnline: boolean }) {
   const [loading, setLoading] = useState('')
@@ -17,9 +18,12 @@ export function CharacterActions({ characterName, isOnline }: { characterName: s
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ characterName, action: type }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) notify.success('Acción completada con éxito', data.message || `La operación sobre ${characterName} se realizó correctamente.`)
+      else notify.error('No se pudo completar la operación', data.error || 'Ocurrió un problema. Intentá nuevamente.')
       setMsg(data.message || data.error || 'Listo')
     } catch {
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
       setMsg('Error de conexión')
     } finally {
       setLoading('')

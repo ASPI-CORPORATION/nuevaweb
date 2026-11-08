@@ -6,6 +6,7 @@ import { ExternalLink, Clock, Coins, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { notify } from '@/components/ui/toaster'
 
 interface VoteStatus {
   site: string
@@ -52,17 +53,20 @@ export function VoteClient({ session, voteStatuses, myVotes, coinsReward }: Vote
         body: JSON.stringify({ site }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
+        notify.success('Voto registrado', `¡Gracias por votar! Recibiste ${coinsReward} Moneda Argentina.`)
         setMessages({ [site]: `¡Voto registrado! +${coinsReward} Moneda Argentina` })
         // Update status
         setStatuses(prev => prev.map(s =>
           s.site === site ? { ...s, canVote: false, lastVote: new Date() } : s
         ))
       } else {
+        notify.error('No se pudo registrar el voto', data.error || 'Ocurrió un problema. Intentá nuevamente.')
         setMessages({ [site]: data.error || 'Error al registrar el voto' })
       }
     } catch {
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
       setMessages({ [site]: 'Error de conexión' })
     } finally {
       setLoading(null)

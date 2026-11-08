@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search, Shield, User, Ban, Zap, Volume2, VolumeX } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { notify } from '@/components/ui/toaster'
 
 interface PlayerData {
   account: { id: number; username: string; email: string; last_ip: string; online: number; expansion: number; joindate: string }
@@ -41,7 +42,9 @@ export default function GmBuscarPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...params }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) notify.success('Acción completada con éxito', data.message || 'La operación se realizó correctamente.')
+    else notify.error('No se pudo completar la operación', data.error || 'Ocurrió un problema. Intentá nuevamente.')
     setActionMsg(data.message || data.error || 'Acción ejecutada')
   }
 

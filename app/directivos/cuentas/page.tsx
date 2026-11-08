@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Search, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { notify } from '@/components/ui/toaster'
 
 export default function DirectivosCuentasPage() {
   const [q, setQ] = useState('')
@@ -16,7 +17,7 @@ export default function DirectivosCuentasPage() {
     setLoading(true); setResult(null); setMsg('')
     const res = await fetch(`/api/gm/player?q=${encodeURIComponent(q)}`)
     setLoading(false)
-    if (!res.ok) { setMsg('No encontrado'); return }
+    if (!res.ok) { setMsg('No encontrado'); notify.error('Cuenta inexistente', 'No encontramos un jugador o cuenta con ese dato.'); return }
     setResult(await res.json())
   }
 

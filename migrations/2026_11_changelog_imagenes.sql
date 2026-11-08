@@ -6,6 +6,9 @@
 -- Compatible con MySQL 8.x y MariaDB 10.x.
 -- ============================================================
 
+-- Los textos con acentos ('Máxima Autoridad', 'Corrección') requieren una conexión UTF-8
+SET NAMES utf8mb4;
+
 USE wowargentina_cms;
 
 DROP PROCEDURE IF EXISTS wa_add_column;
@@ -38,6 +41,26 @@ CALL wa_add_column('cms_changelog', 'author_name', 'VARCHAR(50) NULL DEFAULT NUL
 CALL wa_add_column('cms_changelog', 'updated_at', 'DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`');
 
 DROP PROCEDURE IF EXISTS wa_add_column;
+
+-- Reparación: si una ejecución anterior se hizo con el cliente en latin1, el ENUM quedó
+-- como 'CorrecciÃ³n' y la web no podía guardar esa categoría. Ninguna fila pudo
+-- guardarse con ese valor, así que redefinir el ENUM no altera datos.
+DROP PROCEDURE IF EXISTS wa_fix_category_enum;
+DELIMITER //
+CREATE PROCEDURE wa_fix_category_enum()
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'cms_changelog' AND column_name = 'category'
+      AND column_type <> 'enum(''Nuevo'',''Corrección'',''Balance'',''Evento'')'
+  ) THEN
+    ALTER TABLE cms_changelog
+      MODIFY COLUMN category ENUM('Nuevo','Corrección','Balance','Evento') NOT NULL DEFAULT 'Nuevo';
+  END IF;
+END //
+DELIMITER ;
+CALL wa_fix_category_enum();
+DROP PROCEDURE IF EXISTS wa_fix_category_enum;
 
 -- Discord oficial (configuración, no contenido histórico)
 UPDATE cms_config SET value = 'https://discord.gg/9KmrAPJzjn'

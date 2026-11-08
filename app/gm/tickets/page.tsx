@@ -5,6 +5,9 @@ import useSWR from 'swr'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { MessageSquare, ChevronDown, Send } from 'lucide-react'
+import { notify } from '@/components/ui/toaster'
+
+interface GmTicket { id: number; subject: string; message: string; category: string; status: string; priority: string; created_at: string; username?: string; character_name?: string | null }
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -29,14 +32,25 @@ export default function GmTicketsPage() {
 
   const updateTicket = async (ticketId: number, action: string, payload: Record<string, unknown> = {}) => {
     setLoading(`${ticketId}-${action}`)
-    await fetch('/api/gm/tickets', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticketId, action, ...payload }),
-    })
-    mutate()
-    setReply('')
-    setLoading('')
+    try {
+      const res = await fetch('/api/gm/tickets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketId, action, ...payload }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        notify.error('No se pudo actualizar el ticket', data.error || 'Ocurrió un problema. Intentá nuevamente.')
+        return
+      }
+      notify.success('Ticket actualizado', `El ticket #${ticketId} se actualizó correctamente.`)
+      mutate()
+      setReply('')
+    } catch {
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
+    } finally {
+      setLoading('')
+    }
   }
 
   return (
@@ -48,7 +62,7 @@ export default function GmTicketsPage() {
           <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-30" />
           <p>No hay tickets abiertos</p>
         </div>
-      ) : tickets.map((t: any) => (
+      ) : tickets.map((t: GmTicket) => (
         <div key={t.id} className="bg-slate-900/60 border border-slate-700/50 rounded-2xl overflow-hidden">
           <button
             className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-800/30 transition-colors"

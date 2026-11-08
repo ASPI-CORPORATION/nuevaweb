@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Lock, Mail, Check } from 'lucide-react'
+import { notify } from '@/components/ui/toaster'
 
 function ChangePasswordForm() {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
@@ -24,14 +25,17 @@ function ChangePasswordForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword: form.currentPassword, newPassword: form.newPassword }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
+        notify.success('Contraseña actualizada', 'Tu contraseña fue modificada correctamente.')
         setMsg({ type: 'success', text: '¡Contraseña actualizada! Usala la próxima vez que entres al juego.' })
         setForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       } else {
+        notify.error('No se pudo cambiar la contraseña', data.error || 'Ocurrió un problema. Intentá nuevamente.')
         setMsg({ type: 'error', text: data.error || 'Error al cambiar contraseña' })
       }
     } catch {
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
       setMsg({ type: 'error', text: 'Error de conexión' })
     } finally {
       setLoading(false)

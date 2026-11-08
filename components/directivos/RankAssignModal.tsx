@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, AlertTriangle, Crown, Shield, ChevronDown } from 'lucide-react'
 import { CUSTOM_RBAC_RANKS, RBAC_RANK_IDS, HIGH_RISK_RANKS, getRank } from '@/lib/rbac'
+import { notify } from '@/components/ui/toaster'
 
 export interface StaffMember {
   id: number; username: string; email: string; online: number
@@ -47,11 +48,17 @@ export function RankAssignModal({ member, callerRankId, onClose, onSuccess }: Pr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountId: member.id, rankId: newRankId, reason }),
       })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Error desconocido'); setSaving(false); return }
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'Error desconocido'); setSaving(false)
+        notify.error(res.status === 403 ? 'Permiso denegado' : 'No se pudo cambiar el rango', data.error || 'Ocurrió un problema. Intentá nuevamente.')
+        return
+      }
+      notify.success('Rango actualizado', `${data.oldName ?? 'Sin rango'} → ${data.newName ?? 'Sin rango'}. Se aplica en el próximo inicio de sesión en el juego.`)
       setCacheNote(data.cacheNote ?? '')
       setTimeout(() => { onSuccess(); onClose() }, 1800)
     } catch {
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
       setError('Error de red')
       setSaving(false)
     }

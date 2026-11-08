@@ -14,6 +14,9 @@
 -- Si tus bases tienen otros nombres, reemplazá acore_auth / wowargentina_cms.
 -- ============================================================
 
+-- Los textos con acentos ('Máxima Autoridad', 'Corrección') requieren una conexión UTF-8
+SET NAMES utf8mb4;
+
 CREATE TABLE IF NOT EXISTS wowargentina_cms.wowargentina_directivos (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   account_id       INT UNSIGNED NOT NULL COMMENT 'acore_auth.account.id (vínculo lógico, sin FK entre bases)',
@@ -40,6 +43,11 @@ FROM acore_auth.account a
 WHERE a.id = 1
 ON DUPLICATE KEY UPDATE
   rango = 'propietario', activo = 1, protegido = 1, fecha_baja = NULL, removido_por = NULL;
+
+-- Reparación: nombre guardado con acentos corruptos por un cliente latin1 en una ejecución previa
+UPDATE wowargentina_cms.wowargentina_directivos
+SET nombre_directivo = 'Máxima Autoridad'
+WHERE account_id = 1 AND HEX(nombre_directivo) = '4DC383C2A178696D61204175746F7269646164';
 
 -- Registro de auditoría de la migración (si la tabla de logs existe)
 INSERT INTO wowargentina_cms.cms_directivos_logs (directivo_account_id, target_account_id, action, details, ip)

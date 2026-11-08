@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { Ban, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { notify } from '@/components/ui/toaster'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -27,9 +28,17 @@ export default function DirectivosBAneosPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
     setSaving(false)
-    if (!res.ok) { setErr(data.error); return }
+    if (!res.ok) {
+      setErr(data.error)
+      notify.error(res.status === 403 ? 'Permiso denegado' : 'No se pudo completar la operación', data.error || 'Ocurrió un problema. Intentá nuevamente.')
+      return
+    }
+    const who = form.identifier.trim()
+    if (form.action === 'ban_account') notify.success('Usuario baneado', `El usuario ${who} ha sido baneado con éxito.`)
+    else if (form.action === 'unban_account') notify.success('Usuario desbaneado', `El usuario ${who} ya puede volver a ingresar.`)
+    else notify.success('IP baneada', `La IP ${who} ha sido bloqueada con éxito.`)
     setMsg(data.message)
     setForm(f => ({ ...f, identifier: '', reason: '' }))
     mutate()

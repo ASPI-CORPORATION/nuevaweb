@@ -6,6 +6,9 @@ import { MessageSquare, Plus, ChevronDown, Check } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import useSWR from 'swr'
+import { notify } from '@/components/ui/toaster'
+
+interface TicketRow { id: number; subject: string; category: string; status: string; created_at: string }
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -35,16 +38,19 @@ export default function SoportePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      const d = await res.json()
+      const d = await res.json().catch(() => ({}))
       if (res.ok) {
+        notify.success('Ticket creado', 'El equipo de soporte te responderá pronto.')
         setMsg('¡Ticket creado! Te responderemos pronto.')
         setShowNew(false)
         setForm({ category: 'Bug', subject: '', message: '', character: '' })
         mutate()
       } else {
+        notify.error('No se pudo crear el ticket', d.error || 'Ocurrió un problema. Intentá nuevamente.')
         setMsg(d.error || 'Error al crear ticket')
       }
     } catch {
+      notify.error('Error de conexión', 'Revisá tu conexión e intentá nuevamente.')
       setMsg('Error de conexión')
     } finally {
       setLoading(false)
@@ -136,7 +142,7 @@ export default function SoportePage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {tickets.map((t: any) => (
+          {tickets.map((t: TicketRow) => (
             <div key={t.id} className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-4 hover:border-slate-600 transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div>

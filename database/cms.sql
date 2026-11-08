@@ -8,6 +8,8 @@ CREATE DATABASE IF NOT EXISTS `wowargentina_cms`
   DEFAULT CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
+SET NAMES utf8mb4;
+
 USE `wowargentina_cms`;
 
 -- 1. NOTICIAS

@@ -2,11 +2,14 @@
 
 import { useState } from 'react'
 import { Server, Megaphone, RefreshCw, Loader2 } from 'lucide-react'
+import { notify } from '@/components/ui/toaster'
+import { ConfirmDialog } from '@/components/panel/ConfirmDialog'
 
 export default function DirectivosServidorPage() {
   const [announce, setAnnounce] = useState('')
   const [loading, setLoading] = useState('')
   const [msg, setMsg] = useState('')
+  const [confirmReload, setConfirmReload] = useState(false)
 
   const execute = async (action: string, extra: Record<string, unknown> = {}) => {
     setLoading(action)
@@ -16,9 +19,15 @@ export default function DirectivosServidorPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...extra }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
     setLoading('')
-    if (!res.ok) { setMsg('Error: ' + data.error); return }
+    if (!res.ok) {
+      notify.error('No se pudo completar la operación', data.error || 'Ocurrió un problema. Intentá nuevamente.')
+      setMsg('Error: ' + (data.error ?? 'desconocido'))
+      return
+    }
+    notify.success(action === 'announce' ? 'Anuncio enviado' : action === 'reload_config' ? 'Configuración recargada' : 'Acción completada con éxito',
+      'La operación se realizó correctamente.')
     setMsg(data.result || data.status || '¡Ejecutado!')
   }
 
@@ -67,7 +76,7 @@ export default function DirectivosServidorPage() {
               Ver estado del servidor
             </button>
             <button
-              onClick={() => { if (confirm('¿Recargar la configuración del servidor?')) execute('reload_config') }}
+              onClick={() => setConfirmReload(true)}
               disabled={!!loading}
               className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
               style={{ background: 'rgba(246, 180, 14,0.1)', border: '1px solid rgba(246, 180, 14,0.2)', color: '#F6B40E' }}>
@@ -77,6 +86,16 @@ export default function DirectivosServidorPage() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmReload}
+        warning
+        title="Recargar configuración"
+        message="Se recargará la configuración del worldserver. ¿Querés continuar?"
+        confirmLabel="Recargar"
+        busy={loading === 'reload_config'}
+        onConfirm={() => { setConfirmReload(false); execute('reload_config') }}
+        onCancel={() => setConfirmReload(false)}
+      />
     </div>
   )
 }
