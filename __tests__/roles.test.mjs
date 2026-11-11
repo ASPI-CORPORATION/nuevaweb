@@ -30,11 +30,11 @@ describe('Directivo comes only from wowargentina_directivos', () => {
 })
 
 describe('GM / Admin still come from the game permissions', () => {
-  test('0 player, 1 moderator → user', () => { assert.equal(r(0), 'user'); assert.equal(r(1), 'user') })
+  test('0 player → user; 1 (GM nivel 1 · Soporte) → gm', () => { assert.equal(r(0), 'user'); assert.equal(r(1), 'gm') })
   test('2 → gm, 3 → admin, 4 console → admin', () => { assert.equal(r(2), 'gm'); assert.equal(r(3), 'admin'); assert.equal(r(4), 'admin') })
   test('RBAC Administrador → admin', () => assert.equal(r(0, 90007), 'admin'))
   test('RBAC Game Master..Developer → gm', () => { for (const id of [90002, 90003, 90004, 90005, 90006]) assert.equal(r(0, id), 'gm') })
-  test('RBAC Ayudante / Moderador → user', () => { assert.equal(r(0, 90000), 'user'); assert.equal(r(0, 90001), 'user') })
+  test('RBAC Ayudante / Moderador → gm (GM panel tiers 1 and 2)', () => { assert.equal(r(0, 90000), 'gm'); assert.equal(r(0, 90001), 'gm') })
   test('unknown permission ids ignored', () => { assert.equal(roleFromRbacRank(12345), 'user'); assert.equal(roleFromRbacRank(90010), 'user') })
 })
 

@@ -1,109 +1,75 @@
-import { requirePageRole } from '@/lib/page-guard'
-import { queryAuth, queryCms } from '@/lib/db'
-import { Users, MessageSquare, Shield, Activity } from 'lucide-react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+'use client'
 
-export default async function GmDashboard() {
-  await requirePageRole('gm', '/gm')
+import Link from 'next/link'
+import useSWR from 'swr'
+import {
+  Users, Swords, LifeBuoy, Eye, Gavel, UserPlus, Radio, ArrowRight,
+} from 'lucide-react'
+import { fetcher, PageHeader, StatCard, ErrorBox, Skeletons, OnlineDot } from '@/components/gm/ui'
+import { ServerStatusCards } from '@/components/gm/ServerStatusCards'
+import { DailyBars, OnlineArea } from '@/components/gm/Charts'
+import { CLASS_COLORS } from '@/lib/gm/wow-data'
+import { GM_TIER_LABEL, type GmTier } from '@/lib/gm/permissions'
 
-  let onlinePlayers = 0
-  let openTickets = 0
-  let recentBans: Array<{ bandate: Date; bannedby: string; banreason: string; account: string }> = []
-  let recentLogs: Array<{ gm_account_id: number; action: string; details: string; created_at: Date }> = []
+const n = (v: number | null | undefined) => (v == null ? '—' : v.toLocaleString('es-AR'))
 
-  try {
-    const [onlineRow] = await queryAuth<{ count: number }>(
-      'SELECT COUNT(*) as count FROM account WHERE online = 1'
-    )
-    onlinePlayers = onlineRow?.count ?? 0
+export default function GmDashboard() {
+  const { data, error, isLoading } = useSWR('/api/gm/overview', fetcher, { refreshInterval: 30000 })
+  const { data: online } = useSWR('/api/gm/characters?online=1', fetcher, { refreshInterval: 30000 })
 
-    const [ticketsRow] = await queryCms<{ count: number }>(
-      "SELECT COUNT(*) as count FROM cms_tickets WHERE status IN ('Abierto','En Revisión')"
-    )
-    openTickets = ticketsRow?.count ?? 0
-
-    recentBans = await queryAuth<{ bandate: Date; bannedby: string; banreason: string; account: string }>(
-      `SELECT b.bandate, b.bannedby, b.banreason, a.username as account
-       FROM account_banned b JOIN account a ON b.id = a.id
-       WHERE b.active = 1 ORDER BY b.bandate DESC LIMIT 5`
-    )
-
-    recentLogs = await queryCms<{ gm_account_id: number; action: string; details: string; created_at: Date }>(
-      'SELECT gm_account_id, action, details, created_at FROM cms_gm_logs ORDER BY created_at DESC LIMIT 10'
-    )
-  } catch {}
+  if (error) return <ErrorBox error={error} />
+  if (isLoading || !data) return <Skeletons rows={6} h="h-24" />
+  const c = data.cards
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-['Cinzel'] font-black text-3xl text-white mb-1">Dashboard GM</h1>
-        <div className="flex items-center gap-2 text-sm text-green-400">
-          <Shield className="w-4 h-4" /> Panel de Game Master
-        </div>
+      <PageHeader eyebrow="Panel Game Master" title={`Hola, ${data.viewer.username}`}
+        description={`${GM_TIER_LABEL[data.viewer.tier as GmTier]} · Datos en vivo de AzerothCore y del CMS.`} />
+
+      <ServerStatusCards status={data.status} />
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard icon={Radio} label="Jugadores conectados" value={n(c.onlinePlayers)} hint={c.onlinePlayersSource ? `según ${c.onlinePlayersSource}` : 'no disponible'} color="#4ade80" />
+        <StatCard icon={Users} label="Cuentas registradas" value={n(c.accounts)} hint="acore_auth.account" />
+        <StatCard icon={Swords} label="Personajes creados" value={n(c.characters)} color="#a78bfa" />
+        <StatCard icon={UserPlus} label="Registros de hoy" value={n(c.newToday)} color="#75C7FF" />
+        <StatCard icon={LifeBuoy} label="Tickets abiertos" value={n(c.ticketsOpen)} hint="abiertos + aceptados" color="#F6B40E" />
+        <StatCard icon={Eye} label="En revisión" value={n(c.ticketsReview)} color="#fb923c" />
+        <StatCard icon={Gavel} label="Sanciones activas" value={n(c.sanctionsActive)} hint="cuentas + personajes" color="#f87171" />
+        <Link href="/gm/soporte" className="panel-card p-4 flex flex-col justify-between hover:border-[#74ACDF]/50 transition-colors">
+          <span className="text-xs uppercase tracking-wider text-slate-400">Atajo</span>
+          <span className="text-white font-semibold flex items-center gap-2 mt-2">Ir al centro de soporte <ArrowRight className="w-4 h-4" /></span>
+        </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Online Ahora', value: onlinePlayers, icon: Activity, color: '#90EE90' },
-          { label: 'Tickets Abiertos', value: openTickets, icon: MessageSquare, color: '#75C7FF' },
-          { label: 'Baneos Activos', value: recentBans.length, icon: Shield, color: '#FF6B6B' },
-        ].map(stat => {
-          const Icon = stat.icon
-          return (
-            <div key={stat.label} className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Icon className="w-4 h-4" style={{ color: stat.color }} />
-                <span className="text-xs text-slate-500">{stat.label}</span>
-              </div>
-              <div className="font-['Cinzel'] font-bold text-2xl" style={{ color: stat.color }}>
-                {stat.value}
-              </div>
-            </div>
-          )
-        })}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <OnlineArea data={data.charts.online} />
+        <DailyBars title="Cuentas registradas por día" hint="14 días" data={data.charts.registrations} />
+        <DailyBars title="Tickets recibidos" hint="14 días" data={data.charts.ticketsIn} color="#F6B40E" />
+        <DailyBars title="Tickets resueltos" hint="cerrados, 14 días" data={data.charts.ticketsSolved} color="#4ade80" />
+        <DailyBars title="Sanciones aplicadas" hint="baneos de cuenta y personaje" data={data.charts.sanctions} color="#f87171" />
       </div>
 
-      {/* Baneos recientes */}
-      <div className="bg-slate-900/60 border border-slate-700/50 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-700/40">
-          <h2 className="font-semibold text-white">Baneos Recientes</h2>
+      <section className="panel-card overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+          <h2 className="font-semibold text-white flex items-center gap-2"><Radio className="w-4 h-4 text-green-400" /> Jugadores online</h2>
+          <Link href="/gm/online" className="text-xs text-[#74ACDF] hover:underline">Ver todos</Link>
         </div>
-        {recentBans.length === 0 ? (
-          <div className="text-center py-6 text-slate-500 text-sm">No hay baneos activos</div>
+        {!online ? <Skeletons rows={3} h="h-10" /> : online.characters.length === 0 ? (
+          <p className="p-4 text-sm text-slate-400">No hay jugadores conectados en este momento.</p>
         ) : (
-          <div className="divide-y divide-slate-700/30">
-            {recentBans.map((ban, i) => (
-              <div key={i} className="px-5 py-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-white">{ban.account}</span>
-                  <span className="text-xs text-slate-500">
-                    {format(new Date(ban.bandate), 'd MMM', { locale: es })}
-                  </span>
-                </div>
-                <div className="text-xs text-slate-400 mt-0.5">
-                  Por <span className="text-slate-300">{ban.bannedby}</span>: {ban.banreason}
-                </div>
-              </div>
+          <ul className="divide-y divide-white/5">
+            {online.characters.slice(0, 8).map((ch: { guid: number; name: string; level: number; classId: number; className: string; zone: string; faction: string | null }) => (
+              <li key={ch.guid} className="px-4 py-2.5 flex items-center gap-3 text-sm">
+                <span className="font-semibold min-w-0 truncate" style={{ color: CLASS_COLORS[ch.classId] }}>{ch.name}</span>
+                <span className="text-slate-500 text-xs">Nv {ch.level} · {ch.className}</span>
+                <span className="ml-auto text-xs text-slate-400 truncate">{ch.zone}</span>
+                <OnlineDot online />
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-      </div>
-
-      {/* Acciones rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { href: '/gm/buscar', label: '🔍 Buscar Jugador', desc: 'Buscar por cuenta o personaje' },
-          { href: '/gm/tickets', label: '🎫 Ver Tickets', desc: `${openTickets} tickets abiertos` },
-          { href: '/gm/logs', label: '📋 Ver Logs', desc: 'Historial de acciones GM' },
-        ].map(a => (
-          <a key={a.href} href={a.href} className="bg-slate-800/60 border border-slate-700/50 hover:border-green-500/30 rounded-xl p-4 transition-all">
-            <div className="font-semibold text-white mb-1">{a.label}</div>
-            <div className="text-xs text-slate-400">{a.desc}</div>
-          </a>
-        ))}
-      </div>
+      </section>
     </div>
   )
 }

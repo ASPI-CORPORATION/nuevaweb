@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionFromRequest, getAccountAccess } from '@/lib/auth'
+import { tierOfAccess } from '@/lib/gm/access.server'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest) {
         role: access.role,
         rbacRankId: access.rbacRankId,
         directivoRank: access.directivo?.rank ?? null,
+        gmTier: tierOfAccess(access),
       },
     },
     { headers: { 'Cache-Control': 'no-store' } }
