@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
 import { queryAuthFirst, queryCmsFirst } from './db'
+import { getRankSchema, getRbacRanks } from './staff/rbac-schema.server'
 import {
   type AccessInfo, type WebRole,
   type DirectivoMembership,
@@ -59,19 +60,14 @@ let rbacUnavailableLogged = false
 /**
  * Highest custom RBAC rank (90000-90009) granted to the account, counting only
  * permissions that are actually registered in rbac_permissions.
- * Returns null when there is no rank or the RBAC tables do not exist on this server.
+ * Returns null when there is no rank or the server has no usable RBAC tables
+ * (stock AzerothCore has none). Column names are detected, not assumed.
  */
 export async function getVerifiedRbacRank(accountId: number): Promise<number | null> {
   try {
-    const row = await queryAuthFirst<{ permission: number | null }>(
-      `SELECT MAX(rap.permission) AS permission
-       FROM rbac_account_permissions rap
-       JOIN rbac_permissions rp ON rp.id = rap.permission
-       WHERE rap.id = ? AND rap.permission BETWEEN 90000 AND 90009
-         AND rap.granted = 1 AND rap.realm_id IN (-1, ?)`,
-      [accountId, REALM_ID]
-    )
-    return row?.permission != null ? Number(row.permission) : null
+    const schema = await getRankSchema()
+    const ranks = await getRbacRanks(schema, [accountId])
+    return ranks.get(accountId) ?? null
   } catch (err) {
     if (!rbacUnavailableLogged) {
       rbacUnavailableLogged = true

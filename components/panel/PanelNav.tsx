@@ -25,15 +25,21 @@ interface Props {
   showLogout?: boolean
 }
 
-function isActive(pathname: string, link: PanelLink) {
+function matches(pathname: string, link: PanelLink) {
   return link.exact ? pathname === link.href : pathname === link.href || pathname.startsWith(link.href + '/')
+}
+
+/** The most specific matching link wins (e.g. /directivos/staff/divisiones over /directivos/staff). */
+function activeLink(pathname: string, links: PanelLink[]) {
+  return links.filter(l => matches(pathname, l)).sort((a, b) => b.href.length - a.href.length)[0] ?? null
 }
 
 export function PanelNav({ accent, title, username, roleLabel, badge: Badge, links, crossLinks = [], showLogout }: Props) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const reduce = useReducedMotion()
-  const current = links.find(l => isActive(pathname, l)) ?? links[0]
+  const currentMatch = activeLink(pathname, links)
+  const current = currentMatch ?? links[0]
 
   const [routeSeen, setRouteSeen] = useState(pathname)
   if (routeSeen !== pathname) {
@@ -74,7 +80,7 @@ export function PanelNav({ accent, title, username, roleLabel, badge: Badge, lin
       <nav className="p-2 space-y-0.5" aria-label={title}>
         {links.map(link => {
           const Icon = link.icon
-          const active = isActive(pathname, link)
+          const active = link === currentMatch || (!links.includes(link) && matches(pathname, link))
           return (
             <Link
               key={link.href}

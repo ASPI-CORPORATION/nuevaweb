@@ -5,6 +5,7 @@ import { logUnauthorizedAttempt } from '@/lib/directivos'
 import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 import { rateLimit } from '@/lib/rate-limit'
 import { adaptiveInsert } from '@/lib/adaptive-insert.server'
+import { activeInternalSuspension } from '@/lib/staff/suspension.server'
 import { can, resolveGmTier, type GmCap, type GmTier, GM_TIER_SHORT } from '@/lib/gm/permissions'
 
 export interface GmContext {
@@ -37,6 +38,14 @@ export async function requireGm(req: NextRequest, cap: GmCap): Promise<GmContext
   if (tier === 0 || !can(tier, cap)) {
     await logUnauthorizedAttempt(result.id, result.username, `${req.nextUrl.pathname} (${cap})`, ip)
     return NextResponse.json({ error: DENIED }, { status: 403 })
+  }
+  // Internal staff suspension (Panel de Directivos): blocks the web GM tools, not the game.
+  const suspension = await activeInternalSuspension(result.id)
+  if (suspension) {
+    await logUnauthorizedAttempt(result.id, result.username, `${req.nextUrl.pathname} (suspensión interna #${suspension.id})`, ip)
+    return NextResponse.json({
+      error: `Tus funciones de staff están suspendidas hasta el ${new Date(suspension.ends_at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}.`,
+    }, { status: 403 })
   }
   return { user: result, tier, ip }
 }

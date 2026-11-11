@@ -1,8 +1,9 @@
-import { queryCms, queryAuthFirst } from '@/lib/db'
+import { queryCms, queryAuthFirst, dbCms } from '@/lib/db'
 import { requireRole, getSessionFromRequest, type AuthorizedUser } from '@/lib/auth'
 import { getClientIP, normalizeIP } from '@/lib/ip-utils'
 import { isOwner } from '@/lib/roles'
 import type { NextRequest } from 'next/server'
+import type { PoolConnection } from 'mysql2/promise'
 
 /**
  * DB-verified Directivo check for API routes: the account must have an active row in
@@ -72,7 +73,9 @@ export async function logDirectivoAction(
   targetAccountId: number | null,
   action: string,
   details: string,
-  ip: string
+  ip: string,
+  /** Optional transaction connection, so the log commits together with the action. */
+  conn?: Pick<PoolConnection, 'execute'>
 ) {
   const values: Record<string, unknown> = {
     directivo_account_id: directivoId,
@@ -90,8 +93,8 @@ export async function logDirectivoAction(
     if (required && !(c.Field in values)) values[c.Field] = neutralValue(c.Type)
   }
   const fields = Object.keys(values).filter(f => names.has(f))
-  await queryCms(
+  await (conn ?? dbCms).execute(
     `INSERT INTO cms_directivos_logs (${fields.map(f => `\`${f}\``).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`,
-    fields.map(f => values[f])
+    fields.map(f => values[f]) as never
   )
 }

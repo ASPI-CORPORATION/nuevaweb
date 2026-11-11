@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, Users, Ban, Server, TrendingUp, BookOpen, Settings, Crown, Shield,
-  Newspaper, List, ShoppingBag,
+  Newspaper, List, ShoppingBag, Network, History,
 } from 'lucide-react'
 import { PanelNav, type PanelLink } from '@/components/panel/PanelNav'
 import { panelCrossLinks } from '@/components/panel/crossLinks'
@@ -12,6 +12,8 @@ const links: PanelLink[] = [
   { href: '/directivos', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/directivos/equipo', label: 'Gestión de Directivos', icon: Crown },
   { href: '/directivos/staff', label: 'Staff y Rangos', icon: Users },
+  { href: '/directivos/staff/divisiones', label: 'Gestión de Divisiones', icon: Network },
+  { href: '/directivos/staff/historial', label: 'Historial del Staff', icon: History },
   { href: '/directivos/cuentas', label: 'Cuentas', icon: Shield },
   { href: '/directivos/baneos', label: 'Baneos', icon: Ban },
   { href: '/directivos/economia', label: 'Economía', icon: TrendingUp },

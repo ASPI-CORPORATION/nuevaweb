@@ -1,410 +1,262 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import {
-  Search, Crown, Shield, ChevronRight, Users, Info, Loader2,
-  RefreshCw, UserCheck, UserX, AlertTriangle,
+  Users, UserCheck, PauseCircle, Network, AlertTriangle, Sparkles, Search, UserPlus, Settings2, Database,
+  ArrowUpDown, ChevronDown, RefreshCw, Loader2, Info,
 } from 'lucide-react'
-import { getRank, CUSTOM_RBAC_RANKS } from '@/lib/rbac'
-import { RankAssignModal, type StaffMember } from '@/components/directivos/RankAssignModal'
+import { fetcher, fmtDate, fmtAgo, PageHeader, StatCard, EmptyState, Skeletons, inputCls, OnlineDot } from '@/components/gm/ui'
+import { StaffSubnav, RankBadge, StatusPill, DivisionChip, selectCls } from '@/components/directivos/staff/kit'
+import {
+  StaffActionsSheet, StaffActionModals, IncorporateModal, type MemberLite, type StaffActionKey,
+} from '@/components/directivos/staff/modals'
+import { STAFF_RANKS, rankByKey, MEMBER_STATUS_LABEL, type MemberStatus } from '@/lib/staff/ranks'
 
-// ── Design tokens ────────────────────────────────────────────────────────────
-const GOLD    = '#F6B40E'
-const CELESTE = '#74ACDF'
-const DARK    = '#101F35'
-
-// ── GM level labels ──────────────────────────────────────────────────────────
-const GM_LABELS: Record<number, { label: string; color: string }> = {
-  0:  { label: 'Jugador',    color: '#4a5568' },
-  1:  { label: 'Trial GM',  color: '#60a5fa' },
-  2:  { label: 'GM',        color: '#4ade80' },
-  3:  { label: 'Admin',     color: '#c084fc' },
-  10: { label: 'Directivo', color: GOLD },
+interface Member extends MemberLite {
+  email: string | null
+  lastLogin: string | null
+  joinedAt: string | null
+  warnings: number
+  rbacRankId: number | null
+  rankSource: 'rbac' | 'expediente' | null
+  gmlevelMismatch: boolean
+  expectedGmlevel: number | null
+  divisions: NonNullable<MemberLite['divisions']>
+}
+interface StaffResponse {
+  members: Member[]; former: Member[]
+  stats: { total: number; active: number; suspended: number; divisions: number; activeWarnings: number; newThisMonth: number }
+  schema: { accountAccess: string; rbac: string; rbacWritable: boolean; registered: number[]; errors: string[]; checkedAt: string }
+  viewer: { id: number; username: string; isOwner: boolean }
 }
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+type SortKey = 'rank' | 'id' | 'username' | 'joined' | 'warnings'
+type SortState = { key: SortKey; dir: 1 | -1 }
 
-// ── Rank badge component ──────────────────────────────────────────────────────
-function RankBadge({ rankId }: { rankId: number | null }) {
-  if (rankId === null) return <span className="text-xs" style={{ color: '#3a4a60' }}>Sin rango</span>
-  const r = getRank(rankId)
-  if (!r) return <span className="text-xs font-mono" style={{ color: '#4a5568' }}>{rankId}</span>
+function SortBtn({ k, sort, setSort, children }: { k: SortKey; sort: SortState; setSort: React.Dispatch<React.SetStateAction<SortState>>; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold rounded-lg px-2 py-0.5"
-      style={{ background: r.badgeBg, border: `1px solid ${r.badgeBorder}`, color: r.color }}>
-      <Shield className="w-3 h-3" /> {r.name}
-    </span>
+    <button onClick={() => setSort(s => ({ key: k, dir: s.key === k ? (s.dir === 1 ? -1 : 1) : (k === 'username' || k === 'id' ? 1 : -1) }))}
+      className={`inline-flex items-center gap-1 uppercase tracking-wider ${sort.key === k ? 'text-[#F6B40E]' : ''}`} aria-label={`Ordenar por ${children}`}>
+      {children}<ArrowUpDown className="w-3 h-3" aria-hidden="true" />
+    </button>
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-export default function DirectivosStaffPage() {
-  // Staff list (auto-refresh 30s)
-  const { data: staffData, mutate: mutateStaff, isLoading: staffLoading } = useSWR(
-    '/api/directivos/staff', fetcher, { refreshInterval: 30_000 }
-  )
-  const staff: StaffMember[] = staffData?.staff ?? []
+export default function StaffPage() {
+  const router = useRouter()
+  const { data, error, isLoading, isValidating, mutate } = useSWR<StaffResponse>('/api/directivos/staff', fetcher, { refreshInterval: 60_000 })
+  const { data: divData } = useSWR('/api/directivos/divisiones', fetcher)
+  const [q, setQ] = useState('')
+  const [rank, setRank] = useState('')
+  const [division, setDivision] = useState('')
+  const [status, setStatus] = useState('')
+  const [showFormer, setShowFormer] = useState(false)
+  const [showSources, setShowSources] = useState(false)
+  const [sort, setSort] = useState<SortState>({ key: 'rank', dir: -1 })
+  const [sheetFor, setSheetFor] = useState<Member | null>(null)
+  const [action, setAction] = useState<{ key: StaffActionKey; member: Member } | null>(null)
+  const [incorporate, setIncorporate] = useState(false)
 
-  // History
-  const { data: histData, mutate: mutateHist } = useSWR(
-    '/api/directivos/staff/rbac?history=1&limit=20', fetcher
-  )
-  const history = histData?.logs ?? []
+  const list = useMemo(() => {
+    const src = [...(data?.members ?? []), ...(showFormer ? data?.former ?? [] : [])]
+    const term = q.trim().toLowerCase()
+    const out = src.filter(m =>
+      (!term || m.username.toLowerCase().includes(term) || String(m.id) === term) &&
+      (!rank || (rank === 'none' ? !m.rank : m.rank === rank)) &&
+      (!division || m.divisions.some(d => String(d.id) === division)) &&
+      (!status || m.status === status))
+    const val = (m: Member): number | string => ({
+      rank: (rankByKey(m.rank)?.order ?? 0) * 10 + m.gmlevel, id: m.id, username: m.username.toLowerCase(),
+      joined: m.joinedAt ? new Date(m.joinedAt).getTime() : 0, warnings: m.warnings,
+    })[sort.key]
+    return out.sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * sort.dir)
+  }, [data, q, rank, division, status, showFormer, sort])
 
-  // Search for any account to add
-  const [searchQ, setSearchQ]   = useState('')
-  const [searchResults, setSearchResults] = useState<StaffMember[]>([])
-  const [searching, setSearching] = useState(false)
-
-  // Filter staff table
-  const [filterQ, setFilterQ]   = useState('')
-
-  // Modal
-  const [modalMember, setModalMember] = useState<StaffMember | null>(null)
-  // callerRankId — in a real deployment fetch from server; here we infer from staff list
-  // (The API itself enforces hierarchy — this is for UI display only)
-  const callerRankId: number | null = null // treated as bootstrap Owner in API
-
-  const [activeTab, setActiveTab] = useState<'staff' | 'history'>('staff')
-  const [msg, setMsg] = useState('')
-
-  const refresh = useCallback(() => {
-    mutateStaff(); mutateHist()
-  }, [mutateStaff, mutateHist])
-
-  const handleSearch = async () => {
-    if (!searchQ.trim()) return
-    setSearching(true); setSearchResults([])
-    const res = await fetch(`/api/directivos/staff/rbac?search=${encodeURIComponent(searchQ)}`)
-    const data = await res.json()
-    setSearchResults(data.accounts ?? [])
-    setSearching(false)
+  const viewer = data?.viewer ?? { id: 0, username: '', isOwner: false }
+  const pick = (k: StaffActionKey) => {
+    const m = sheetFor
+    setSheetFor(null)
+    if (!m) return
+    if (k === 'expediente') router.push(`/directivos/staff/${m.id}`)
+    else setAction({ key: k, member: m })
   }
 
-  const filteredStaff = staff.filter(s =>
-    s.username.toLowerCase().includes(filterQ.toLowerCase()) ||
-    String(s.id).includes(filterQ)
-  )
-
-  const onModalSuccess = () => {
-    setMsg('Rango actualizado correctamente')
-    refresh()
-    setTimeout(() => setMsg(''), 4000)
-  }
-
-  // ── render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
-
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="font-['Cinzel'] font-black text-3xl mb-1" style={{ color: GOLD }}>
-          Gestión de Staff y Rangos
-        </h1>
-        <p className="text-sm" style={{ color: `${GOLD}60` }}>
-          Asignación de rangos RBAC personalizados · Toda acción queda en auditoría permanente
-        </p>
-      </div>
-
-      {/* ── Cache warning ────────────────────────────────────────────── */}
-      <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-xs"
-        style={{ background: 'rgba(116,172,223,0.07)', border: `1px solid ${CELESTE}25`, color: CELESTE }}>
-        <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-        <span>
-          <strong>Caché de RBAC:</strong> AzerothCore carga los permisos al iniciar sesión.
-          Los cambios se guardan en <code style={{ color: GOLD }}>rbac_account_permissions</code> inmediatamente
-          pero se aplican la próxima vez que la cuenta ingresa al juego.
-          No hay recarga en caliente de sesiones activas.
-        </span>
-      </div>
-
-      {/* ── Success msg ─────────────────────────────────────────────── */}
-      {msg && (
-        <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm"
-          style={{ background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', color: '#4ade80' }}>
-          <UserCheck className="w-4 h-4" /> {msg}
-        </div>
-      )}
-
-      {/* ── Rank legend ─────────────────────────────────────────────── */}
-      <div className="rounded-2xl p-4" style={{ background: `${DARK}`, border: `1px solid ${GOLD}15` }}>
-        <div className="text-xs font-semibold mb-3 flex items-center gap-2" style={{ color: `${GOLD}80` }}>
-          <Crown className="w-3.5 h-3.5" /> Jerarquía de rangos RBAC (ascendente)
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {[90000, 90001, 90002, 90003, 90004, 90005, 90006, 90007, 90008, 90009].map(id => {
-            const r = CUSTOM_RBAC_RANKS[id as keyof typeof CUSTOM_RBAC_RANKS]
-            return (
-              <span key={id} className="inline-flex items-center gap-1 text-xs font-medium rounded-lg px-2.5 py-1"
-                style={{ background: r.badgeBg, border: `1px solid ${r.badgeBorder}`, color: r.color }}>
-                <Shield className="w-3 h-3" /> {r.name}
-              </span>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── Search any account ───────────────────────────────────────── */}
-      <div className="rounded-2xl p-5" style={{ background: DARK, border: `1px solid ${GOLD}15` }}>
-        <div className="text-xs font-semibold mb-3 flex items-center gap-2" style={{ color: `${GOLD}80` }}>
-          <Search className="w-3.5 h-3.5" /> Buscar cuenta para asignar rango
-        </div>
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              value={searchQ}
-              onChange={e => setSearchQ(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="Nombre de usuario o ID de cuenta..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-white outline-none"
-              style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${GOLD}20` }}
-            />
-          </div>
-          <button onClick={handleSearch} disabled={searching}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50 flex items-center gap-2"
-            style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)` }}>
-            {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Buscar
-          </button>
-        </div>
-
-        {searchResults.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {searchResults.map(acc => (
-              <div key={acc.id} className="flex items-center justify-between gap-4 rounded-xl px-4 py-3"
-                style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${GOLD}10` }}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-                    style={{ background: `${GOLD}15`, color: GOLD }}>
-                    {acc.id}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-white">{acc.username}</div>
-                    <div className="text-xs mt-0.5 flex items-center gap-2">
-                      <RankBadge rankId={acc.rbac_rank_id} />
-                      <span style={{ color: `${CELESTE}70` }}>GM {acc.gmlevel}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="flex items-center gap-1 text-xs"
-                    style={{ color: acc.online ? '#4ade80' : '#4a5568' }}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${acc.online ? 'bg-green-400' : 'bg-slate-600'}`} />
-                    {acc.online ? 'Online' : 'Offline'}
-                  </span>
-                  <button onClick={() => setModalMember(acc)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-black"
-                    style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)` }}>
-                    <Crown className="w-3 h-3" /> Gestionar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {searchResults.length === 0 && searchQ && !searching && (
-          <div className="mt-3 text-xs text-center py-3" style={{ color: '#4a5568' }}>Sin resultados</div>
-        )}
-      </div>
-
-      {/* ── Tabs ─────────────────────────────────────────────────────── */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit"
-        style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}20` }}>
-        {(['staff', 'history'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            className="px-5 py-2 rounded-lg text-sm font-semibold font-['Cinzel'] transition-all"
-            style={activeTab === tab ? { background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, color: '#000' } : { color: `${GOLD}60` }}>
-            {tab === 'staff' ? `Staff (${staff.length})` : 'Historial de cambios'}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Staff table ──────────────────────────────────────────────── */}
-      {activeTab === 'staff' && (
-        <div>
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input value={filterQ} onChange={e => setFilterQ(e.target.value)}
-                placeholder="Filtrar por usuario o ID..."
-                className="w-full pl-9 pr-4 py-2 rounded-xl text-sm text-white outline-none"
-                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${GOLD}20` }} />
-            </div>
-            <button onClick={refresh}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-colors hover:bg-white/5"
-              style={{ border: `1px solid ${GOLD}20`, color: `${GOLD}70` }}>
-              <RefreshCw className="w-3.5 h-3.5" /> Actualizar
+    <div className="space-y-5">
+      <PageHeader eyebrow="Equipo" title="Staff y Rangos"
+        description="Cuentas con nivel GM o rango administrativo efectivo en AzerothCore. Los cambios de rango se aplican en el juego y quedan auditados."
+        actions={
+          <div className="flex gap-2">
+            <button onClick={() => mutate()} className="btn-ghost px-3 text-slate-200" aria-label="Actualizar" title="Actualizar">
+              {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             </button>
+            <button onClick={() => setIncorporate(true)} className="btn-gold uppercase tracking-wider flex-1 sm:flex-none"><UserPlus className="w-4 h-4" /> Incorporar al staff</button>
           </div>
+        } />
+      <StaffSubnav />
 
-          <div className="rounded-2xl overflow-hidden" style={{ background: DARK, border: `1px solid ${GOLD}15` }}>
-            {/* Table header */}
-            <div className="grid grid-cols-[48px_1fr_200px_120px_100px_120px] gap-0 text-xs font-semibold tracking-wider"
-              style={{ background: `${GOLD}08`, borderBottom: `1px solid ${GOLD}15`, padding: '10px 16px', color: `${GOLD}70` }}>
-              <span>ID</span>
-              <span>Usuario</span>
-              <span>Rango RBAC</span>
-              <span>Nivel GM</span>
-              <span>Estado</span>
-              <span className="text-right">Acciones</span>
-            </div>
-
-            {staffLoading && (
-              <div className="flex items-center justify-center py-12 gap-2 text-sm" style={{ color: `${GOLD}50` }}>
-                <Loader2 className="w-4 h-4 animate-spin" /> Cargando…
-              </div>
-            )}
-
-            {!staffLoading && filteredStaff.length === 0 && (
-              <div className="text-center py-12 text-sm" style={{ color: '#3a4a60' }}>
-                <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                {filterQ ? 'Sin resultados para ese filtro' : 'No hay staff registrado'}
-              </div>
-            )}
-
-            {filteredStaff.map((member, idx) => {
-              const rank = member.rbac_rank_id !== null ? getRank(member.rbac_rank_id) : null
-              const gmInfo = GM_LABELS[member.gmlevel] ?? { label: `GM${member.gmlevel}`, color: CELESTE }
-              return (
-                <div key={member.id}
-                  className="grid grid-cols-[48px_1fr_200px_120px_100px_120px] gap-0 items-center transition-colors hover:bg-white/[0.02]"
-                  style={{ borderBottom: idx < filteredStaff.length - 1 ? `1px solid ${GOLD}08` : 'none', padding: '12px 16px' }}>
-
-                  {/* ID */}
-                  <span className="text-xs font-mono" style={{ color: `${CELESTE}60` }}>{member.id}</span>
-
-                  {/* Username */}
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0"
-                      style={{ background: rank ? rank.badgeBg : 'rgba(255,255,255,0.05)', color: rank ? rank.color : '#4a5568' }}>
-                      {member.username[0].toUpperCase()}
-                    </div>
-                    <span className="font-semibold text-white text-sm truncate">{member.username}</span>
-                  </div>
-
-                  {/* RBAC rank */}
-                  <RankBadge rankId={member.rbac_rank_id} />
-
-                  {/* GM level */}
-                  <span className="text-xs font-semibold" style={{ color: gmInfo.color }}>
-                    {gmInfo.label}
-                  </span>
-
-                  {/* Online status */}
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${member.online ? 'bg-green-400' : 'bg-slate-700'}`} />
-                    <span className="text-xs" style={{ color: member.online ? '#4ade80' : '#4a5568' }}>
-                      {member.online ? 'Online' : 'Offline'}
-                    </span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex justify-end">
-                    <button onClick={() => setModalMember(member)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-black transition-all hover:scale-105"
-                      style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)` }}>
-                      <Crown className="w-3 h-3" /> Gestionar <ChevronRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Legend: GM vs RBAC difference */}
-          <div className="mt-4 rounded-xl px-4 py-3 flex items-start gap-2 text-xs"
-            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#4a5568' }}>
-            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: `${GOLD}50` }} />
-            <span>
-              <strong style={{ color: `${GOLD}80` }}>Nivel GM</strong> es el permiso interno de AzerothCore (account_access).
-              El <strong style={{ color: `${CELESTE}80` }}>Rango RBAC</strong> es el rango organizacional personalizado
-              de WoW Argentina (rbac_account_permissions). Son independientes — un cambio en uno no afecta al otro.
-            </span>
-          </div>
+      {error ? (
+        <div className="panel-card p-4 border-red-500/30" role="alert">
+          <p className="font-semibold text-red-300">No se pudo cargar el staff</p>
+          <p className="text-sm text-red-200/80 mt-1 break-words">{error.message}</p>
+          <p className="text-xs text-slate-500 mt-2">Esto es un error de base de datos, no significa que no haya staff. Revisá los permisos del usuario de la web sobre acore_auth.</p>
         </div>
-      )}
+      ) : null}
 
-      {/* ── History ──────────────────────────────────────────────────── */}
-      {activeTab === 'history' && (
-        <div>
-          <div className="rounded-2xl overflow-hidden" style={{ background: DARK, border: `1px solid ${GOLD}15` }}>
-            <div className="px-5 py-3 text-xs font-semibold tracking-wider flex items-center justify-between"
-              style={{ background: `${GOLD}08`, borderBottom: `1px solid ${GOLD}15`, color: `${GOLD}70` }}>
-              <span>Historial de cambios RBAC</span>
-              <button onClick={refresh} className="transition-opacity hover:opacity-80">
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            </div>
+      {!data && !error ? <Skeletons rows={2} h="h-24" /> : data && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+            <StatCard icon={Users} label="Miembros" value={data.stats.total} color="#74ACDF" />
+            <StatCard icon={UserCheck} label="Activos" value={data.stats.active} color="#4ade80" />
+            <StatCard icon={PauseCircle} label="Suspendidos" value={data.stats.suspended} color="#f87171" />
+            <StatCard icon={Network} label="Divisiones" value={data.stats.divisions} color="#a78bfa" />
+            <StatCard icon={AlertTriangle} label="Advertencias vigentes" value={data.stats.activeWarnings} color="#F6B40E" />
+            <StatCard icon={Sparkles} label="Nuevos del mes" value={data.stats.newThisMonth} color="#22d3ee" />
+          </div>
 
-            {history.length === 0 ? (
-              <div className="text-center py-10 text-sm" style={{ color: '#3a4a60' }}>
-                <Shield className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                Sin cambios RBAC registrados
+          <div className="panel-card px-4 py-3 text-xs">
+            <button onClick={() => setShowSources(v => !v)} className="w-full flex items-center gap-2 text-left text-slate-300" aria-expanded={showSources}>
+              <Database className="w-4 h-4 text-[#74ACDF] shrink-0" aria-hidden="true" />
+              <span className="flex-1 min-w-0 truncate">Fuentes verificadas: account_access {data.schema.accountAccess === 'ok' ? '✓' : '✗'} · {data.schema.rbacWritable ? `RBAC ✓ (${data.schema.registered.length}/10 rangos)` : 'sin RBAC'}</span>
+              <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showSources ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+            {showSources && (
+              <div className="mt-3 space-y-3 text-slate-400">
+                <p className="break-words">{data.schema.rbac}</p>
+                {data.schema.errors.map(e => <p key={e} className="text-red-300 break-words">{e}</p>)}
+                <div className="overflow-x-auto -mx-1">
+                  <table className="w-full min-w-[420px] text-left">
+                    <caption className="text-left text-slate-300 font-semibold pb-1 px-1">Mapa de rangos de WoW Argentina</caption>
+                    <thead><tr className="text-slate-500"><th className="px-1 py-1">Rango</th><th className="px-1">Nivel GM (account_access)</th><th className="px-1">Permiso RBAC</th></tr></thead>
+                    <tbody>
+                      {STAFF_RANKS.map(r => (
+                        <tr key={r.key} className="border-t border-white/5">
+                          <td className="px-1 py-1"><RankBadge rank={r.key} compact /></td>
+                          <td className="px-1">{r.gmlevel}</td>
+                          <td className="px-1 font-mono">{r.rbacId} {data.schema.rbacWritable ? (data.schema.registered.includes(r.rbacId) ? '✓' : '— no registrado') : '— (sin RBAC)'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p>Las divisiones y advertencias son internas del CMS y nunca cambian permisos del juego. Verificado: {fmtDate(data.schema.checkedAt)}.</p>
               </div>
+            )}
+          </div>
+
+          <div className="panel-card p-3 space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" aria-hidden="true" />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por usuario o ID" className={`${inputCls} pl-9`} aria-label="Buscar miembro" />
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <select value={rank} onChange={e => setRank(e.target.value)} className={selectCls} aria-label="Rango">
+                <option value="">Todos los rangos</option>
+                {[...STAFF_RANKS].reverse().map(r => <option key={r.key} value={r.key}>{r.name}</option>)}
+                <option value="none">Sin rango interno</option>
+              </select>
+              <select value={division} onChange={e => setDivision(e.target.value)} className={selectCls} aria-label="División">
+                <option value="">Todas las divisiones</option>
+                {(divData?.divisions ?? []).map((d: { id: number; name: string }) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+              <select value={status} onChange={e => setStatus(e.target.value)} className={selectCls} aria-label="Estado">
+                <option value="">Todos los estados</option>
+                {(['activo', 'suspendido', 'pendiente_restauracion', 'retirado'] as MemberStatus[]).map(s => <option key={s} value={s}>{MEMBER_STATUS_LABEL[s]}</option>)}
+              </select>
+              <label className="flex items-center gap-2 px-3 rounded-xl border border-white/10 text-sm text-slate-300 min-h-[42px]">
+                <input type="checkbox" checked={showFormer} onChange={e => setShowFormer(e.target.checked)} className="accent-[#F6B40E]" />
+                Incluir retirados ({data.former.length})
+              </label>
+            </div>
+          </div>
+
+          <section className="panel-card overflow-hidden" aria-label={`Staff (${list.length})`}>
+            <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between gap-2">
+              <h2 className="font-['Cinzel'] font-bold text-white">STAFF ({data.stats.total})</h2>
+              {list.length !== data.stats.total && <span className="text-xs text-slate-500">{list.length} con estos filtros</span>}
+            </div>
+            {isLoading ? <Skeletons rows={5} /> : list.length === 0 ? (
+              <EmptyState icon={Users} title={data.stats.total === 0 ? 'No hay cuentas con nivel GM' : 'Ningún miembro coincide con los filtros'}
+                text={data.stats.total === 0 ? 'Ninguna cuenta tiene gmlevel > 0 ni rango RBAC en este reino. Usá "Incorporar al staff".' : undefined} />
             ) : (
-              <div className="divide-y" style={{ borderColor: `${GOLD}08` }}>
-                {history.map((log: {
-                  id: number; action: string; details: string; created_at: string
-                  directivo_name: string | null; target_name: string | null; ip: string
-                }) => {
-                  const isAssign = log.action === 'ASSIGN_RBAC_RANK'
-                  const isRemove = log.action === 'REMOVE_RBAC_RANK'
-                  return (
-                    <div key={log.id} className="px-5 py-3.5 hover:bg-white/[0.015]">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            {/* Admin who acted */}
-                            <span className="text-xs font-semibold text-white">
-                              {log.directivo_name ?? 'Sistema'}
-                            </span>
-                            {/* Action badge */}
-                            <span className="text-xs px-2 py-0.5 rounded-lg font-mono font-semibold"
-                              style={{
-                                background: isAssign ? 'rgba(74,222,128,0.1)' : isRemove ? 'rgba(239,68,68,0.1)' : `${GOLD}10`,
-                                color: isAssign ? '#4ade80' : isRemove ? '#f87171' : GOLD,
-                                border: `1px solid ${isAssign ? 'rgba(74,222,128,0.2)' : isRemove ? 'rgba(239,68,68,0.2)' : `${GOLD}20`}`,
-                              }}>
-                              {isAssign ? '↑ ASIGNÓ' : isRemove ? '↓ RETIRÓ' : '↔ CAMBIÓ'}
-                            </span>
-                            {/* Target */}
-                            {log.target_name && (
-                              <span className="text-xs" style={{ color: CELESTE }}>
-                                a <strong>{log.target_name}</strong>
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs leading-relaxed" style={{ color: `${GOLD}50` }}>{log.details}</div>
+              <>
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-[11px] text-slate-500 border-b border-white/5">
+                        <th className="px-4 py-3"><SortBtn sort={sort} setSort={setSort} k="id">ID</SortBtn></th>
+                        <th className="px-3 py-3"><SortBtn sort={sort} setSort={setSort} k="username">Usuario</SortBtn></th>
+                        <th className="px-3 py-3"><SortBtn sort={sort} setSort={setSort} k="rank">Rango</SortBtn></th>
+                        <th className="px-3 py-3 uppercase tracking-wider">Nivel GM</th>
+                        <th className="px-3 py-3 uppercase tracking-wider">División</th>
+                        <th className="px-3 py-3 uppercase tracking-wider">Estado</th>
+                        <th className="px-3 py-3"><SortBtn sort={sort} setSort={setSort} k="joined">Ingreso</SortBtn></th>
+                        <th className="px-3 py-3"><SortBtn sort={sort} setSort={setSort} k="warnings">Advert.</SortBtn></th>
+                        <th className="px-4 py-3 text-right uppercase tracking-wider">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {list.map(m => (
+                        <tr key={m.id} className="hover:bg-white/[0.02]">
+                          <td className="px-4 py-3 font-mono text-[#F6B40E]">{m.id}</td>
+                          <td className="px-3 py-3 max-w-[200px]">
+                            <Link href={`/directivos/staff/${m.id}`} className="font-semibold text-white hover:underline block truncate">{m.username}</Link>
+                            <div className="text-[11px] text-slate-500 truncate">{m.directivo ? (m.directivo === 'propietario' ? 'Propietario' : 'Directivo') + ' · ' : ''}{m.online ? 'en línea' : `visto ${fmtAgo(m.lastLogin)}`}</div>
+                          </td>
+                          <td className="px-3 py-3"><RankBadge rank={m.rank} gmlevel={m.gmlevel} /></td>
+                          <td className="px-3 py-3 text-slate-300">
+                            {m.gmlevel}{m.gmlevelMismatch && <span className="ml-1 text-[#F6B40E]" title={`El rango espera nivel ${m.expectedGmlevel}`}>⚠</span>}
+                          </td>
+                          <td className="px-3 py-3 max-w-[200px]">
+                            {m.divisions.length ? <div className="flex flex-wrap gap-1">{m.divisions.slice(0, 2).map(d => <DivisionChip key={d.id} {...d} />)}{m.divisions.length > 2 && <span className="text-xs text-slate-500">+{m.divisions.length - 2}</span>}</div> : <span className="text-slate-600">—</span>}
+                          </td>
+                          <td className="px-3 py-3"><StatusPill status={m.status} /></td>
+                          <td className="px-3 py-3 text-xs text-slate-400 whitespace-nowrap">{m.joinedAt ? fmtDate(m.joinedAt, false) : 'Sin registro'}</td>
+                          <td className="px-3 py-3 text-center">{m.warnings ? <span className="text-[#F6B40E] font-semibold">{m.warnings}</span> : <span className="text-slate-600">0</span>}</td>
+                          <td className="px-4 py-3 text-right"><button onClick={() => setSheetFor(m)} className="btn-ghost px-3 py-1.5 text-xs"><Settings2 className="w-3.5 h-3.5" /> Administrar</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <ul className="lg:hidden divide-y divide-white/5">
+                  {list.map(m => (
+                    <li key={m.id} className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-[#050A14] shrink-0" style={{ background: rankByKey(m.rank)?.color ?? '#74ACDF' }} aria-hidden="true">
+                          {m.username.charAt(0)}
                         </div>
-                        <div className="flex-shrink-0 text-right">
-                          <div className="text-xs whitespace-nowrap" style={{ color: '#3a4a60' }}>
-                            {format(new Date(log.created_at), 'd MMM HH:mm', { locale: es })}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <Link href={`/directivos/staff/${m.id}`} className="font-semibold text-white break-all hover:underline">{m.username}</Link>
+                            <span className="font-mono text-xs text-[#F6B40E]">#{m.id}</span>
                           </div>
-                          <div className="text-xs mt-0.5 font-mono" style={{ color: '#2a3a50' }}>{log.ip}</div>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <RankBadge rank={m.rank} gmlevel={m.gmlevel} compact />
+                            <StatusPill status={m.status} />
+                            {m.warnings > 0 && <span className="text-[11px] text-[#F6B40E]">{m.warnings} advert.</span>}
+                          </div>
+                          {m.divisions.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1">{m.divisions.map(d => <DivisionChip key={d.id} {...d} />)}</div>}
+                          <div className="mt-1.5 text-[11px] text-slate-500">Nivel GM {m.gmlevel}{m.gmlevelMismatch ? ' ⚠' : ''} · <OnlineDot online={!!m.online} /></div>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                      <button onClick={() => setSheetFor(m)} className="btn-ghost w-full mt-3 py-2 text-sm"><Settings2 className="w-4 h-4" /> Administrar</button>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
-          </div>
-        </div>
+          </section>
+          <p className="text-xs text-slate-500 flex items-start gap-1.5"><Info className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" /> Las cuentas sin rango administrativo efectivo no aparecen acá; están en Cuentas.</p>
+        </>
       )}
 
-      {/* ── Modal ────────────────────────────────────────────────────── */}
-      {modalMember && (
-        <RankAssignModal
-          member={modalMember}
-          callerRankId={callerRankId}
-          onClose={() => setModalMember(null)}
-          onSuccess={onModalSuccess}
-        />
-      )}
+      <StaffActionsSheet open={!!sheetFor} member={sheetFor} onClose={() => setSheetFor(null)} onPick={pick} />
+      <StaffActionModals member={action?.member ?? null} action={action?.key ?? null} viewer={viewer} onClose={() => setAction(null)} onDone={() => mutate()} />
+      {incorporate && <IncorporateModal open viewer={viewer} onClose={() => setIncorporate(false)} onDone={() => mutate()} />}
     </div>
   )
 }

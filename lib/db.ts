@@ -123,3 +123,25 @@ export async function withAuthTransaction<T>(
     conn.release()
   }
 }
+
+/**
+ * Runs `fn` inside a transaction on a CMS pool connection. All pools use the same server and
+ * user, so statements may write fully-qualified tables of other schemas (e.g. acore_auth) and
+ * still commit or roll back atomically together with the CMS rows.
+ */
+export async function withCmsTransaction<T>(
+  fn: (conn: mysql.PoolConnection) => Promise<T>
+): Promise<T> {
+  const conn = await dbCms.getConnection()
+  try {
+    await conn.beginTransaction()
+    const result = await fn(conn)
+    await conn.commit()
+    return result
+  } catch (err) {
+    await conn.rollback()
+    throw err
+  } finally {
+    conn.release()
+  }
+}

@@ -22,6 +22,8 @@ export interface AccountFilters {
   online?: 'online' | 'offline'
   withCharacters?: boolean
   gm?: 'staff' | 'players'
+  /** Exact effective gmlevel for this realm (0 = players). Requires PII-level access. */
+  gmlevel?: number
   sort?: 'id_desc' | 'id_asc' | 'last_login' | 'username'
   page: number
   pageSize: number
@@ -46,6 +48,11 @@ export async function listAccounts(f: AccountFilters, tier: GmTier) {
     const staff = `EXISTS (SELECT 1 FROM ${AUTH_DB}.account_access x WHERE x.id = a.id AND x.gmlevel > 0 AND x.RealmID IN (-1, ?))`
     where.push(f.gm === 'staff' ? staff : `NOT ${staff}`)
     params.push(REALM_ID)
+  }
+
+  if (f.gmlevel != null && can(tier, 'viewPiiMasked')) {
+    where.push(`COALESCE((SELECT MAX(x.gmlevel) FROM ${AUTH_DB}.account_access x WHERE x.id = a.id AND x.RealmID IN (-1, ?)), 0) = ?`)
+    params.push(REALM_ID, f.gmlevel)
   }
 
   let geoEnabled = geoConfigured()
