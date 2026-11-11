@@ -48,7 +48,7 @@ export function DiscordSection() {
               </span>
             </h2>
             <p className="text-slate-400 text-lg mb-8 leading-relaxed max-w-lg">
-              Miles de jugadores argentinos te esperan en nuestro Discord. Estrategias, eventos, soporte y la mejor comunidad de WoW Argentina.
+              La comunidad de WoW Argentina se reúne en Discord: novedades del lanzamiento, eventos del Staff, grupos para arenas, BGs y raids, y soporte.
             </p>
 
             {/* CTA buttons */}
@@ -110,8 +110,8 @@ export function DiscordSection() {
                 <span className="text-xs text-slate-400 font-medium">#general — WoW Argentina</span>
               </div>
               {[
-                { user: 'Argonath', msg: 'Alguien para arena 3v3? 2.1k rating', color: '#ABD473' },
-                { user: 'Keldria', msg: 'Evento raid hoy a las 21hs!', color: '#F58CBA' },
+                { user: 'Argonath', msg: '¿Alguien para arena 2v2?', color: '#ABD473' },
+                { user: 'Keldria', msg: '¡Armamos grupo para ICC!', color: '#F58CBA' },
                 { user: 'Staff', msg: '¡Bienvenido al servidor WoW Argentina!', color: '#F6B40E' },
               ].map(({ user, msg, color }) => (
                 <div key={user} className="flex items-start gap-2 py-1">

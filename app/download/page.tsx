@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Download, Settings, User, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import Link from 'next/link'
+import { RealmlistCopy } from '@/components/brand/RealmlistCopy'
 
 const steps = [
   {
@@ -21,7 +22,7 @@ const steps = [
     icon: Settings,
     title: 'Configurá el realmlist',
     description: 'Abrí la carpeta del cliente de WoW, buscá el archivo Data/enUS/realmlist.wtf (o Data/esES/) y editalo con el Bloc de Notas. Reemplazá el contenido por:',
-    code: `set realmlist logon.wowargentina.com.ar`,
+    realmlist: true,
   },
   {
     number: '03',
@@ -48,12 +49,12 @@ const faq = [
     a: 'Sí, si ya tenés el cliente original de WoW WotLK 3.3.5a solo necesitás cambiar el realmlist.',
   },
   {
-    q: '¿Cuáles son las tasas de XP?',
-    a: 'Depende del camino que elegís: Aventurero Blizzlike (x2 XP), Leveo Rápido (x5 XP con NPCs en 20/40/60), Instant 80 (comenzás directo en 80).',
+    q: '¿Cómo funciona el Instant 80?',
+    a: 'WoW Argentina es un servidor Instant 80: alcanzás el nivel máximo rápidamente y tenés formas de equiparte para empezar a jugar PvP (arenas y BGs) y PvE (raids como ICC). Crossfaction está habilitado para raids y BGs.',
   },
   {
     q: '¿Hay wipes o reseteos?',
-    a: 'No planeamos hacer wipes. El servidor está construido para durar y evolucionar con nuevos sets y contenido custom.',
+    a: 'No planeamos hacer wipes. El servidor está construido para durar y evolucionar con nuevo contenido.',
   },
   {
     q: '¿Dónde pido ayuda?',
@@ -99,9 +100,10 @@ export default function DownloadPage() {
                   <div className="text-xs text-[#74ACDF] font-mono font-bold mb-1">PASO {step.number}</div>
                   <h3 className="font-['Cinzel'] font-bold text-xl text-white mb-2">{step.title}</h3>
                   <p className="text-slate-400 leading-relaxed mb-4">{step.description}</p>
-                  {step.code && (
-                    <div className="bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 font-mono text-green-400 text-sm mb-4 break-all">
-                      {step.code}
+                  {step.realmlist && (
+                    <div className="mb-4">
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500 mb-1.5">Realmlist oficial</div>
+                      <RealmlistCopy />
                     </div>
                   )}
                   {step.actions && (

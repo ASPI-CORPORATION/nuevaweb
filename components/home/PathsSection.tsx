@@ -1,49 +1,49 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Zap, Flame, Shield } from 'lucide-react'
+import { Zap, Swords, Snowflake } from 'lucide-react'
 import Link from 'next/link'
 
 const paths = [
   {
     num: '01',
-    Icon: Shield,
-    accent: '#75C7FF',
-    glow: 'rgba(117,199,255,0.18)',
-    bgGlow: 'rgba(117,199,255,0.04)',
-    borderHover: 'rgba(117,199,255,0.4)',
-    title: 'Aventurero Blizzlike',
-    subtitle: 'El camino clásico, agilizado',
-    desc: 'Viví la experiencia original de WoW WotLK con rates optimizados para Argentina. Sets de leveo exclusivos, dungeons, raids, y PvP como Blizzard lo pensó.',
-    tags: ['× 2 XP', 'Sets de Leveo', 'Blizzlike +', 'PvP / PvE'],
-    cta: 'Elegí este camino',
-  },
-  {
-    num: '02',
     Icon: Zap,
     accent: '#F6B40E',
     glow: 'rgba(246, 180, 14,0.18)',
     bgGlow: 'rgba(246, 180, 14,0.04)',
     borderHover: 'rgba(246, 180, 14,0.4)',
     title: 'Instant 80',
-    subtitle: 'Directo al endgame',
-    desc: 'Creás el personaje, ya sos nivel 80 con gear inicial. Arenas, battlegrounds, raids de alto nivel desde el primer momento. Sin leveo, puro contenido top.',
-    tags: ['Nivel 80', 'Gear Inicial', 'Arenas', 'Raids Instant'],
-    cta: 'Elegí este camino',
+    subtitle: 'Tu aventura comienza al máximo nivel.',
+    desc: 'Alcanzá instantáneamente el nivel 80 y preparate para disfrutar del contenido endgame de Wrath of the Lich King. Equipate rápidamente y empezá a competir sin largas horas de leveo.',
+    tags: ['Nivel 80', 'Equipamiento rápido', 'Endgame'],
+    cta: 'Creá tu cuenta',
     featured: true,
   },
   {
-    num: '03',
-    Icon: Flame,
+    num: '02',
+    Icon: Swords,
     accent: '#FF6B4A',
     glow: 'rgba(255,107,74,0.18)',
     bgGlow: 'rgba(255,107,74,0.04)',
     borderHover: 'rgba(255,107,74,0.4)',
-    title: 'Leveo Rápido',
-    subtitle: 'El camino del medio',
-    desc: 'NPCs a los niveles 20, 40 y 60 te dan quests, gear y boost de XP. Leveo acelerado con contenido a seguir. Llegás al 80 rápido y bien equipado.',
-    tags: ['NPCs 20/40/60', 'XP Rápido', 'Quests Custom', 'Gear por zona'],
-    cta: 'Elegí este camino',
+    title: 'PvP & Crossfaction',
+    subtitle: 'Competí sin límites de facción.',
+    desc: 'Disfrutá de arenas y campos de batalla con Crossfaction habilitado en BGs. Luchá por la victoria y poné a prueba tu habilidad frente a otros jugadores.',
+    tags: ['Battlegrounds', 'Arenas', 'Crossfaction'],
+    cta: 'Creá tu cuenta',
+  },
+  {
+    num: '03',
+    Icon: Snowflake,
+    accent: '#75C7FF',
+    glow: 'rgba(117,199,255,0.18)',
+    bgGlow: 'rgba(117,199,255,0.04)',
+    borderHover: 'rgba(117,199,255,0.4)',
+    title: 'Raids & PvE',
+    subtitle: 'Conquistá los desafíos de Rasganorte.',
+    desc: 'Enfrentate a los desafíos de WotLK, participá en raids como Ciudadela de la Corona de Hielo y disfrutá de contenido PvE con Crossfaction habilitado para raids.',
+    tags: ['ICC', 'Raids', 'PvE', 'Crossfaction'],
+    cta: 'Creá tu cuenta',
   },
 ]
 
@@ -60,16 +60,16 @@ export function PathsSection() {
           className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-4"
             style={{ background: 'rgba(117,199,255,0.07)', border: '1px solid rgba(117,199,255,0.18)', color: '#75C7FF' }}>
-            <Zap className="w-3.5 h-3.5" /> Elegí cómo jugar
+            <Zap className="w-3.5 h-3.5" /> Modalidad Instant 80
           </div>
           <h2 className="font-['Cinzel'] font-black text-4xl md:text-5xl text-white mb-4">
-            Tres Caminos,{' '}
+            WoW Argentina,{' '}
             <span style={{ background: 'linear-gradient(135deg, #75C7FF, #FFFFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              Tu Elección
+              Instant 80
             </span>
           </h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            WoW Argentina es el único servidor con tres formas distintas de vivir Rasganorte. Cada camino está diseñado para un estilo diferente.
+            Alcanzá el nivel máximo, equipate rápidamente y preparate para conquistar Rasganorte. Disfrutá del PvP y PvE de WotLK 3.3.5a con Crossfaction, raids, arenas y campos de batalla.
           </p>
         </motion.div>
 
@@ -98,7 +98,7 @@ export function PathsSection() {
               {p.featured && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full text-xs font-bold tracking-widest uppercase"
                   style={{ background: 'linear-gradient(135deg, #F6B40E, #b45309)', color: '#050A14' }}>
-                  Más Popular
+                  Modalidad oficial
                 </div>
               )}
 

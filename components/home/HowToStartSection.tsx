@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Download, Settings, UserPlus, Gamepad2 } from 'lucide-react'
 import Link from 'next/link'
+import { RealmlistCopy } from '@/components/brand/RealmlistCopy'
 
 const steps = [
   {
@@ -10,31 +11,31 @@ const steps = [
     Icon: Download,
     color: '#75C7FF',
     title: 'Descargá WoW 3.3.5a',
-    desc: 'Necesitás el cliente de World of Warcraft versión 3.3.5a (Wrath of the Lich King). Si ya lo tenés instalado, saltá al paso 2.',
+    desc: 'Conseguí el cliente compatible con Wrath of the Lich King (versión 3.3.5a). Si ya lo tenés instalado, pasá al siguiente paso.',
     cta: { label: 'Ir a Descargas', href: '/download' },
   },
   {
     num: '02',
-    Icon: Settings,
-    color: '#4ade80',
-    title: 'Cambiá el Realmlist',
-    desc: 'En la carpeta del juego, abrí Data/enUS/realmlist.wtf y reemplazá el contenido por:',
-    code: `set realmlist ${process.env.NEXT_PUBLIC_REALMLIST || 'logon.wowargentina.com.ar'}`,
-  },
-  {
-    num: '03',
     Icon: UserPlus,
     color: '#F6B40E',
     title: 'Creá tu Cuenta',
-    desc: 'Registrate gratis en nuestra web. Con un usuario y contraseña ya podés entrar al juego.',
+    desc: 'Registrate gratuitamente en WoW Argentina. Con tu usuario y contraseña vas a entrar al juego.',
     cta: { label: 'Crear Cuenta', href: '/register' },
+  },
+  {
+    num: '03',
+    Icon: Settings,
+    color: '#4ade80',
+    title: 'Configurá tu Realmlist',
+    desc: 'En la carpeta del juego, abrí Data/enUS/realmlist.wtf (o Data/esES/) y reemplazá el contenido por:',
+    realmlist: true,
   },
   {
     num: '04',
     Icon: Gamepad2,
     color: '#a78bfa',
-    title: 'Entrá a Jugar',
-    desc: 'Abrí WoW, seleccioná Wrath of the Lich King en la pantalla de inicio y entrá con tus credenciales. ¡Bienvenido a Rasganorte!',
+    title: 'Preparate para Jugar',
+    desc: 'Ingresá al servidor cuando esté disponible, alcanzá el nivel 80, equipate y comenzá tu aventura en Rasganorte.',
   },
 ]
 
@@ -57,7 +58,7 @@ export function HowToStartSection() {
             </span>
           </h2>
           <p className="text-slate-400 text-lg max-w-xl mx-auto">
-            En 4 pasos simples estás jugando en WoW Argentina.
+            En 4 pasos estás listo para jugar en WoW Argentina.
           </p>
         </motion.div>
 
@@ -93,12 +94,7 @@ export function HowToStartSection() {
                   <h3 className="font-['Cinzel'] font-bold text-base text-white mb-2">{step.title}</h3>
                   <p className="text-slate-400 text-sm leading-relaxed mb-3">{step.desc}</p>
 
-                  {step.code && (
-                    <div className="rounded-lg px-3 py-2 text-xs font-mono break-all mb-3"
-                      style={{ background: 'rgba(117,199,255,0.07)', border: '1px solid rgba(117,199,255,0.14)', color: '#75C7FF' }}>
-                      {step.code}
-                    </div>
-                  )}
+                  {step.realmlist && <RealmlistCopy stacked className="mb-3 text-left" />}
 
                   {step.cta && (
                     <Link href={step.cta.href}>

@@ -4,6 +4,7 @@ import { Logo } from '@/components/brand/Logo'
 import { FlagStripe, SolDeMayo } from '@/components/brand/SolDeMayo'
 import { DiscordIcon } from '@/components/brand/DiscordIcon'
 import { SITE, DISCORD_URL } from '@/lib/site-config'
+import { RealmlistCopy } from '@/components/brand/RealmlistCopy'
 
 const NAV_COLS = [
   {
@@ -46,13 +47,13 @@ export function Footer() {
           <div className="space-y-5">
             <Logo />
             <p className="text-sm text-slate-400 max-w-sm">
-              Servidor argentino de World of Warcraft: Wrath of the Lich King 3.3.5a. Comunidad, eventos y Rasganorte con identidad propia.
+              Servidor argentino de World of Warcraft: Wrath of the Lich King 3.3.5a. Instant 80 con PvP y PvE, Crossfaction en raids y BGs, y una comunidad que habla tu idioma.
             </p>
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 max-w-sm">
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500 mb-1.5">
-                <Server className="w-3.5 h-3.5" /> Realmlist
+                <Server className="w-3.5 h-3.5" /> Realmlist oficial
               </div>
-              <code className="block text-sm text-[#cfe6f8] break-all">set realmlist {SITE.realmlist}</code>
+              <RealmlistCopy stacked />
             </div>
             <div className="flex flex-wrap gap-2">
               <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer"

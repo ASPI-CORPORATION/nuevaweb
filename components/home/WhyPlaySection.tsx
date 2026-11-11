@@ -1,17 +1,17 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Users, Swords, TrendingUp, Star, Shield, Zap, Scale, MapPin } from 'lucide-react'
+import { Users, Swords, Shield, Zap, Snowflake, ArrowLeftRight, CalendarHeart, LifeBuoy } from 'lucide-react'
 
 const benefits = [
-  { Icon: Users, color: '#75C7FF', title: 'Comunidad Activa', desc: 'Miles de jugadores argentinos. Discord, eventos, raids, arenas organizadas.' },
-  { Icon: Swords, color: '#FF6B4A', title: 'PvP Competitivo', desc: 'Arenas 2v2 y 3v3, battlegrounds, honor. Balance continuo de clases.' },
-  { Icon: TrendingUp, color: '#4ade80', title: 'Progresión Híbrida', desc: 'Tres caminos únicos adaptados a tu estilo y tiempo disponible.' },
-  { Icon: Star, color: '#F6B40E', title: 'Sets Exclusivos', desc: 'Equipamiento custom diseñado para Argentina. Tres tiers de poder.' },
-  { Icon: Shield, color: '#a78bfa', title: 'Staff Activo', desc: 'Equipo de soporte real. Tickets respondidos, bugs corregidos rápido.' },
-  { Icon: Scale, color: '#22d3ee', title: 'Balance Justo', desc: 'Clases ajustadas continuamente. Ninguna domina de forma absurda.' },
-  { Icon: Zap, color: '#f97316', title: 'Eventos Únicos', desc: 'Eventos de temporada, torneos PvP, raids especiales y más.' },
-  { Icon: MapPin, color: '#e879f9', title: 'Argentina First', desc: 'Servidores en Argentina. Mejor ping, mejor experiencia, comunidad local.' },
+  { Icon: Zap, color: '#F6B40E', title: 'Nivel Máximo Inmediato', desc: 'Con la modalidad Instant 80 alcanzás el nivel 80 rápidamente y vas directo al contenido endgame de Wrath of the Lich King.' },
+  { Icon: Shield, color: '#75C7FF', title: 'Equipamiento Inicial', desc: 'El servidor te ofrece formas de equiparte rápido para empezar a participar en actividades PvP y PvE desde el primer día.' },
+  { Icon: Swords, color: '#FF6B4A', title: 'PvP Competitivo', desc: 'Arenas, campos de batalla y combates entre jugadores para poner a prueba tu habilidad y tu equipo.' },
+  { Icon: Snowflake, color: '#22d3ee', title: 'PvE de WotLK', desc: 'Raids de Rasganorte, Ciudadela de la Corona de Hielo, mazmorras y todo el contenido de nivel 80.' },
+  { Icon: ArrowLeftRight, color: '#a78bfa', title: 'Crossfaction', desc: 'Habilitado para raids y BGs: jugadores de distintas facciones comparten grupos y partidas, según la configuración del servidor.' },
+  { Icon: Users, color: '#4ade80', title: 'Comunidad Argentina', desc: 'Una comunidad argentina e hispanohablante que juega, organiza y habla tu idioma.' },
+  { Icon: CalendarHeart, color: '#f97316', title: 'Eventos del Staff', desc: 'Eventos organizados por el Staff de WoW Argentina para toda la comunidad.' },
+  { Icon: LifeBuoy, color: '#e879f9', title: 'Soporte desde la Web', desc: 'Tickets de soporte y gestión de tu cuenta desde la web, atendidos por el Staff.' },
 ]
 
 export function WhyPlaySection() {
@@ -34,7 +34,7 @@ export function WhyPlaySection() {
             </span>
           </h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            No es solo un servidor. Es la experiencia completa diseñada para vos.
+            Así funciona la experiencia Instant 80: nivel máximo, equipamiento rápido y todo el endgame de WotLK con Crossfaction en raids y BGs.
           </p>
         </motion.div>
 

@@ -10,11 +10,11 @@ import { Toaster } from '@/components/ui/toaster'
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://wowargentina.com.ar'),
   title: 'WoW Argentina - Dominá Rasganorte',
-  description: 'Servidor privado de World of Warcraft Wrath of the Lich King 3.3.5a. Tres caminos: Aventurero Blizzlike, Instant 80, Leveo Rápido. Sets Custom argentinos. ¡Únite a la comunidad!',
+  description: 'WoW Argentina — Instant 80. Servidor de World of Warcraft Wrath of the Lich King 3.3.5a: nivel 80 inmediato, PvP y PvE, ICC, arenas y BGs con Crossfaction. Lanzamiento: viernes 13 de noviembre de 2026, 18:00 (Argentina).',
   keywords: 'WoW Argentina, World of Warcraft privado, Wrath of the Lich King, WotLK 3.3.5a, AzerothCore, servidor WoW Argentina',
   openGraph: {
     title: 'WoW Argentina - Dominá Rasganorte',
-    description: 'El mejor servidor WoW WotLK de Argentina. Tres caminos, Sets Custom, comunidad argentina.',
+    description: 'WoW Argentina — Instant 80: PvP y PvE de WotLK 3.3.5a con Crossfaction en raids y BGs. Comunidad argentina.',
     url: process.env.NEXT_PUBLIC_SITE_URL,
     siteName: 'WoW Argentina',
     images: [{ url: '/images/og-image.jpg' }],

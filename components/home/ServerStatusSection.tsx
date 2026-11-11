@@ -1,4 +1,7 @@
 import { queryCharacters } from '@/lib/db'
+import { getServerStatus } from '@/lib/gm/status.server'
+import { SITE } from '@/lib/site-config'
+import { RealmlistCopy } from '@/components/brand/RealmlistCopy'
 import { Server, Wifi, Cpu, Globe, Users } from 'lucide-react'
 
 async function getOnlineCount() {
@@ -9,21 +12,23 @@ async function getOnlineCount() {
 }
 
 export async function ServerStatusSection() {
-  const online = await getOnlineCount()
+  const [online, status] = await Promise.all([getOnlineCount(), getServerStatus().catch(() => null)])
   const isLive = online !== null
 
+  // Real checks only: authserver TCP, worldserver SOAP, database query. Nothing is assumed online.
   const services = [
-    { label: 'Auth Server', status: 'online', desc: 'Autenticación activa' },
-    { label: 'World Server', status: 'online', desc: 'Rasganorte disponible' },
-    { label: 'Base de Datos', status: 'online', desc: 'MySQL 8 estable' },
-    { label: 'Web CMS', status: 'online', desc: 'Portal funcionando' },
+    { label: 'Auth Server', online: !!status?.authserver.online, desc: status?.authserver.online ? 'Autenticación activa' : 'Sin respuesta' },
+    { label: 'World Server', online: !!status?.worldserver.online, desc: status?.worldserver.online ? 'Rasganorte disponible' : 'Fuera de línea' },
+    { label: 'Base de Datos', online: isLive, desc: isLive ? 'Conexión correcta' : 'Sin conexión' },
+    { label: 'Web CMS', online: true, desc: 'Portal funcionando' },
   ]
+  const allOnline = services.every(s => s.online)
 
   const info = [
     { Icon: Cpu, label: 'Core', value: 'AzerothCore 2026' },
     { Icon: Globe, label: 'Versión', value: 'WotLK 3.3.5a' },
     { Icon: Server, label: 'Expansión', value: 'Wrath of the Lich King' },
-    { Icon: Wifi, label: 'Realmlist', value: process.env.NEXT_PUBLIC_REALMLIST || 'logon.wowargentina.com.ar' },
+    { Icon: Wifi, label: 'Realmlist', value: SITE.realmlist },
   ]
 
   return (
@@ -35,9 +40,11 @@ export async function ServerStatusSection() {
         {/* Header */}
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-4"
-            style={{ background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.18)', color: '#4ade80' }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            {isLive ? 'Sistema operativo' : 'Estado del servidor'}
+            style={allOnline
+              ? { background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.18)', color: '#4ade80' }
+              : { background: 'rgba(246,180,14,0.07)', border: '1px solid rgba(246,180,14,0.2)', color: '#F6B40E' }}>
+            <span className={`w-1.5 h-1.5 rounded-full ${allOnline ? 'bg-green-400 animate-pulse' : 'bg-[#F6B40E]'}`} />
+            {allOnline ? 'Sistema operativo' : 'Estado del servidor'}
           </div>
           <h2 className="font-['Cinzel'] font-black text-4xl md:text-5xl text-white mb-4">
             Estado del{' '}
@@ -67,9 +74,9 @@ export async function ServerStatusSection() {
                     <div className="text-sm font-medium text-white">{s.label}</div>
                     <div className="text-xs text-slate-500">{s.desc}</div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-green-400 flex-shrink-0">
-                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                    ONLINE
+                  <div className={`flex items-center gap-1.5 text-xs font-medium flex-shrink-0 ${s.online ? 'text-green-400' : 'text-red-400'}`}>
+                    <span className={`w-2 h-2 rounded-full ${s.online ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                    {s.online ? 'ONLINE' : 'OFFLINE'}
                   </div>
                 </div>
               ))}
@@ -117,11 +124,9 @@ export async function ServerStatusSection() {
                 </div>
               ))}
             </div>
-            {/* Realmlist copy hint */}
-            <div className="rounded-lg px-3 py-2 text-xs font-mono"
-              style={{ background: 'rgba(117,199,255,0.06)', border: '1px solid rgba(117,199,255,0.1)', color: '#75C7FF' }}>
-              set realmlist {process.env.NEXT_PUBLIC_REALMLIST || 'logon.wowargentina.com.ar'}
-            </div>
+            {/* Realmlist oficial */}
+            <div className="text-xs text-slate-500 uppercase tracking-wider mb-1.5">Realmlist oficial</div>
+            <RealmlistCopy stacked />
           </div>
         </div>
       </div>

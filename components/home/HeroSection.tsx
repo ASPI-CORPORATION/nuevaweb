@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, MotionConfig } from 'framer-motion'
-import { Download, UserPlus, Users, Copy, Check, Swords, Snowflake } from 'lucide-react'
+import { Download, Gamepad2, Users, Zap, Swords } from 'lucide-react'
 import { SolDeMayo } from '@/components/brand/SolDeMayo'
 import { DiscordIcon } from '@/components/brand/DiscordIcon'
 import { DISCORD_URL, SITE } from '@/lib/site-config'
+import { RealmlistCopy } from '@/components/brand/RealmlistCopy'
+import { LaunchCountdown } from '@/components/home/LaunchCountdown'
 
 // Deterministic positions: identical on server and client (no hydration mismatch)
 const FLAKES = Array.from({ length: 22 }, (_, i) => ({
@@ -33,22 +35,13 @@ function useCounter(target: number | null, ms = 1200) {
   return n
 }
 
-export function HeroSection() {
+export function HeroSection({ launchPending }: { launchPending: boolean }) {
   const [online, setOnline] = useState<number | null>(null)
-  const [copied, setCopied] = useState(false)
   const display = useCounter(online)
 
   useEffect(() => {
     fetch('/api/stats/online').then(r => (r.ok ? r.json() : { count: 0 })).then(d => setOnline(Number(d.count) || 0)).catch(() => setOnline(0))
   }, [])
-
-  const copyRealmlist = async () => {
-    try {
-      await navigator.clipboard.writeText(`set realmlist ${SITE.realmlist}`)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
-    } catch {}
-  }
 
   const fade = (delay: number) => ({ initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.55, delay } })
 
@@ -81,7 +74,7 @@ export function HeroSection() {
             <span className="flex flex-col w-5 h-3 rounded-[2px] overflow-hidden shrink-0" aria-hidden="true">
               <span className="flex-1 bg-[#74ACDF]" /><span className="flex-1 bg-white" /><span className="flex-1 bg-[#74ACDF]" />
             </span>
-            Servidor argentino · WotLK 3.3.5a
+            Instant 80 · PvP &amp; PvE · WotLK 3.3.5a
           </motion.div>
 
           <motion.h1 {...fade(0.08)} className="font-['Cinzel'] font-black leading-[0.95] mb-4 text-[clamp(2.35rem,11.5vw,6.5rem)]">
@@ -92,20 +85,24 @@ export function HeroSection() {
           </motion.h1>
 
           <motion.p {...fade(0.16)} className="font-['Cinzel'] text-sm sm:text-lg tracking-[0.3em] uppercase text-[#F6B40E] mb-5">
-            Con alma argentina
+            A tu manera
           </motion.p>
 
+          <motion.div {...fade(0.19)}>
+            <LaunchCountdown initiallyPending={launchPending} />
+          </motion.div>
+
           <motion.p {...fade(0.22)} className="text-slate-300 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 mb-8">
-            Tres caminos de progreso, sets custom con identidad propia, PvP competitivo y una comunidad que habla tu idioma.
-            Creá tu cuenta gratis y empezá hoy.
+            Viví la experiencia Instant 80 de WoW Argentina. Alcanzá el nivel máximo, equipate rápidamente y enfrentate a los
+            desafíos de Rasganorte. ICC, raids, arenas y BGs con Crossfaction activado. ¡Tu aventura comienza en el nivel 80!
           </motion.p>
 
           <motion.div {...fade(0.3)} className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center lg:justify-start mb-8">
             <Link href="/register" className="btn-gold px-7 py-3.5 text-base">
-              <UserPlus className="w-5 h-5" /> Crear cuenta gratis
+              <Gamepad2 className="w-5 h-5" /> Jugar ahora
             </Link>
             <Link href="/download" className="btn-ghost px-6 py-3.5 text-base">
-              <Download className="w-5 h-5" /> Descargar cliente
+              <Download className="w-5 h-5" /> Descargar
             </Link>
             <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold text-white bg-[#5865F2] hover:bg-[#4752c4] transition-colors">
               <DiscordIcon className="w-5 h-5" /> Discord
@@ -114,10 +111,10 @@ export function HeroSection() {
 
           <motion.ol {...fade(0.38)} className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-xl mx-auto lg:mx-0 text-left" aria-label="Cómo empezar">
             {[
-              ['1', 'Creá tu cuenta', '/register'],
-              ['2', 'Descargá el cliente', '/download'],
+              ['1', 'Descargá WoW 3.3.5a', '/download'],
+              ['2', 'Creá tu cuenta', '/register'],
               ['3', 'Configurá el realmlist', '/download'],
-              ['4', '¡Entrá a jugar!', '/download'],
+              ['4', 'Preparate para jugar', '/download'],
             ].map(([n, label, href]) => (
               <li key={n}>
                 <Link href={href} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 hover:border-[#74ACDF]/40 transition-colors">
@@ -153,19 +150,12 @@ export function HeroSection() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
-                <div className="rounded-lg bg-white/[0.03] border border-white/5 px-3 py-2.5 flex items-center gap-2 text-slate-300"><Swords className="w-4 h-4 text-[#F6B40E]" /> PvP y arenas</div>
-                <div className="rounded-lg bg-white/[0.03] border border-white/5 px-3 py-2.5 flex items-center gap-2 text-slate-300"><Snowflake className="w-4 h-4 text-[#75C7FF]" /> Rasganorte 80</div>
+                <div className="rounded-lg bg-white/[0.03] border border-white/5 px-3 py-2.5 flex items-center gap-2 text-slate-300"><Zap className="w-4 h-4 text-[#F6B40E]" /> Instant 80</div>
+                <div className="rounded-lg bg-white/[0.03] border border-white/5 px-3 py-2.5 flex items-center gap-2 text-slate-300"><Swords className="w-4 h-4 text-[#75C7FF]" /> Crossfaction</div>
               </div>
 
-              <div className="text-xs text-slate-400 mb-1.5">Realmlist</div>
-              <button
-                onClick={copyRealmlist}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-[#74ACDF]/25 bg-[#74ACDF]/5 text-left hover:bg-[#74ACDF]/10 transition-colors"
-                aria-label="Copiar realmlist"
-              >
-                <code className="text-xs sm:text-sm text-[#cfe6f8] break-all">set realmlist {SITE.realmlist}</code>
-                {copied ? <Check className="w-4 h-4 text-green-400 shrink-0" /> : <Copy className="w-4 h-4 text-slate-400 shrink-0" />}
-              </button>
+              <div className="text-xs text-slate-400 mb-1.5">Realmlist oficial</div>
+              <RealmlistCopy variant="inline" />
             </div>
           </div>
         </motion.aside>

@@ -401,3 +401,15 @@ tr:hover td {
   }
   #snow-canvas { display: none; }
 }
+
+/* Cuenta regresiva de lanzamiento: brillo que recorre los bloques */
+@keyframes countdown-shine {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  60%, 100% { transform: translateX(220%) skewX(-18deg); }
+}
+.countdown-shine {
+  animation: countdown-shine 4.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .countdown-shine { animation: none; display: none; }
+}
