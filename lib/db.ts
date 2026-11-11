@@ -31,6 +31,8 @@ function sqlIdentifier(name: string): string {
 
 /** Qualified auth DB name for cross-database joins from the CMS pool (e.g. account usernames). */
 export const AUTH_DB = sqlIdentifier(process.env.DATABASE_AUTH || 'acore_auth')
+export const CHARACTERS_DB = sqlIdentifier(process.env.DATABASE_CHARACTERS || 'acore_characters')
+export const CMS_DB = sqlIdentifier(process.env.DATABASE_CMS || 'wowargentina_cms')
 
 /** Qualified world DB name for cross-database joins (e.g. item_template from the characters pool). */
 export const WORLD_DB = sqlIdentifier(process.env.DATABASE_WORLD || 'acore_world')

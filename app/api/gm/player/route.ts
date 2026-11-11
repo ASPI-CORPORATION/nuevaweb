@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireGmLevel } from '@/lib/auth'
+import { requireDirectivo } from '@/lib/directivos'
 import { queryAuthFirst, queryAuth, queryCharacters } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
-  const result = await requireGmLevel(req, 2)
+  // Only consumer: /directivos/cuentas. GM tooling uses /api/gm/accounts with tier checks and PII masking.
+  const result = await requireDirectivo(req)
   if (result instanceof Response) return result
 
   const q = req.nextUrl.searchParams.get('q') || ''

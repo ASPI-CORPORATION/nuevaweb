@@ -34,9 +34,22 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;')
 }
 
+function decodeXml(str: string): string {
+  return str
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&amp;/g, '&')
+}
+
 function parseSOAPResponse(xml: string): string {
   const match = xml.match(/<result>([\s\S]*?)<\/result>/)
-  return match ? match[1].trim() : xml
+  return decodeXml(match ? match[1].trim() : '')
+}
+
+/** AzerothCore answers failed commands with HTTP 500 + SOAP Fault whose faultstring is the command output. */
+function parseSOAPFault(xml: string): string | null {
+  const match = xml.match(/<faultstring>([\s\S]*?)<\/faultstring>/)
+  return match ? decodeXml(match[1].trim()) : null
 }
 
 export async function soapCommand(command: string): Promise<{ success: boolean; result: string }> {
@@ -55,13 +68,11 @@ export async function soapCommand(command: string): Promise<{ success: boolean; 
       signal: AbortSignal.timeout(10000),
     })
 
-    if (!response.ok) {
-      return { success: false, result: `HTTP ${response.status}` }
-    }
-
     const xml = await response.text()
-    const result = parseSOAPResponse(xml)
-    return { success: true, result }
+    if (!response.ok) {
+      return { success: false, result: parseSOAPFault(xml) ?? `HTTP ${response.status}` }
+    }
+    return { success: true, result: parseSOAPResponse(xml) }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error SOAP desconocido'
     return { success: false, result: msg }
@@ -118,12 +129,14 @@ export async function revivePlayer(characterName: string): Promise<{ success: bo
   return soapCommand(`.revive ${characterName}`)
 }
 
-export async function teleportPlayer(characterName: string, mapId: number, x: number, y: number, z: number): Promise<{ success: boolean; result: string }> {
-  return soapCommand(`.go creature ${characterName}`)
+/** `.tele name` works for online and offline characters; location must exist in acore_world.game_tele. */
+export async function teleportPlayer(characterName: string, teleName: string): Promise<{ success: boolean; result: string }> {
+  return soapCommand(`.tele name ${characterName} ${teleName}`)
 }
 
-export async function unstuckPlayer(characterName: string): Promise<{ success: boolean; result: string }> {
-  return soapCommand(`.character unstuck ${characterName}`)
+/** AzerothCore `.unstuck $playername [inn/graveyard/startzone]` (online or offline). */
+export async function unstuckPlayer(characterName: string, location: 'inn' | 'graveyard' | 'startzone' = 'inn'): Promise<{ success: boolean; result: string }> {
+  return soapCommand(`.unstuck ${characterName} ${location}`)
 }
 
 export async function sendAnnounce(message: string): Promise<{ success: boolean; result: string }> {
@@ -140,7 +153,8 @@ export async function getServerStatus(): Promise<{ online: boolean; players: num
   const result = await soapCommand('.server info')
   if (!result.success) return { online: false, players: 0, uptime: '0' }
 
-  const playersMatch = result.result.match(/(\d+) players online/)
+  // AzerothCore: "Connected players: 12. Characters in world: 12." / older: "12 players online"
+  const playersMatch = result.result.match(/Connected players:\s*(\d+)/i) ?? result.result.match(/(\d+) players online/i)
   const players = playersMatch ? parseInt(playersMatch[1]) : 0
 
   return { online: true, players, uptime: result.result }

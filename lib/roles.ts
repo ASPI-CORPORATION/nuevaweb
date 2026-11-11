@@ -57,18 +57,18 @@ export function maxRole(a: WebRole, b: WebRole): WebRole {
 /** Native AzerothCore: 0 player, 1 moderator, 2 gamemaster, 3 administrator, 4 console. */
 export function roleFromGmLevel(gmlevel: number): WebRole {
   if (gmlevel >= 3) return 'admin'
-  if (gmlevel >= 2) return 'gm'
+  if (gmlevel >= 1) return 'gm'
   return 'user'
 }
 
 /**
  * Custom RBAC ranks → web role (never Directivo). Least privilege:
- * Administrador / Co-Owner / Owner → Admin, Game Master..Developer → GM.
+ * Administrador / Co-Owner / Owner → Admin, Ayudante..Developer → GM panel.
  */
 export function roleFromRbacRank(rankId: number | null | undefined): WebRole {
   if (rankId == null) return 'user'
   if (rankId >= 90007 && rankId <= 90009) return 'admin'
-  if (rankId >= 90002 && rankId <= 90006) return 'gm'
+  if (rankId >= 90000 && rankId <= 90006) return 'gm'
   return 'user'
 }
 
